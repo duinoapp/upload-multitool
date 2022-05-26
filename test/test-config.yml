@@ -1,0 +1,3 @@
+devices:
+  uno: /dev/ttyACM0
+compileServer: https://compile.duino.app
