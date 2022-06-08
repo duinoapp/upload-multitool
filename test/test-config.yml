@@ -1,3 +1,26 @@
 devices:
-  uno: /dev/ttyACM0
+  uno:
+    name: Arduino Uno
+    # Find VID and PID in the Arduino IDE > Tools > Get Board Info
+    vendorIds:
+      - '2341'
+    productIds:
+      - '0001'
+    code: blink
+    fqbn: arduino:avr:uno
+    cpu: atmega328p
+    tool: avrdude
+    speed: 115200
+  mega:
+    name: Arduino Mega 2560
+    vendorIds:
+      - '2341'
+    productIds:
+      - '0042'
+    code: blink
+    fqbn: arduino:avr:mega
+    cpu: atmega2560
+    tool: avrdude
+    speed: 115200
+# verbose: true
 compileServer: https://compile.duino.app

@@ -2,7 +2,8 @@
 // converted to typescript/modernised by mrfrase3 (GPL-3.0 license)
 
 import { SerialPort } from 'serialport/dist/index.d';
-import { setDTRRTS } from '../util/serial-helpers';
+import { setDTRRTS } from '../../util/serial-helpers';
+import asyncTimeout from '../../util/asyncTimeout';
 
 interface STK500v1Options {
   quiet?: boolean;
@@ -63,8 +64,6 @@ const statics = {
   OK_RESPONSE: Buffer.from([0x14, 0x10]),
 };
 statics.OK_RESPONSE = Buffer.from([statics.RES_STK_INSYNC, statics.RES_STK_OK]);
-
-const asyncTimeout = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default class STK500v1 {
   opts: STK500v1Options;
@@ -291,7 +290,7 @@ export default class STK500v1 {
       responseData: statics.OK_RESPONSE,
       timeout,
     });
-  };
+  }
 
   async upload(hex: Buffer, pageSize: number, timeout = 400) {
     this.log('upload');
@@ -302,14 +301,14 @@ export default class STK500v1 {
       await promise;
       const pageaddr = i * pageSize;
       const useaddr = pageaddr >> 1;
-      const writeBytes = hex.slice(pageaddr, Math.min(pageaddr + pageSize, hex.length - 1));
+      const writeBytes = hex.subarray(pageaddr, (hex.length > pageSize ? (pageaddr + pageSize) : hex.length - 1));
       await this.loadAddress(useaddr, timeout);
       await this.loadPage(writeBytes, timeout);
       this.log(`uploaded page ${i + 1} of ${pages.length}`);
-      asyncTimeout(4);
+      await asyncTimeout(4);
     }, Promise.resolve());
     this.log('upload complete');
-  };
+  }
 
   exitProgrammingMode(timeout = 400): Promise<Buffer|null> {
     this.log('exiting programming mode');
@@ -320,7 +319,7 @@ export default class STK500v1 {
       responseData: statics.OK_RESPONSE,
       timeout,
     });
-  };
+  }
 
   async verify(hex: Buffer, pageSize: number, timeout = 400) {
     this.log('verify');
@@ -331,14 +330,14 @@ export default class STK500v1 {
       await promise;
       const pageaddr = i * pageSize;
       const useaddr = pageaddr >> 1;
-      const writeBytes = hex.slice(pageaddr, Math.min(pageaddr + pageSize, hex.length - 1));
+      const writeBytes = hex.subarray(pageaddr, (hex.length > pageSize ? (pageaddr + pageSize) : hex.length - 1));
       await this.loadAddress(useaddr, timeout);
       await this.verifyPage(writeBytes, pageSize, timeout);
       this.log(`verified page ${i + 1} of ${pages.length}`);
       asyncTimeout(4);
     }, Promise.resolve());
     this.log('verification complete');
-  };
+  }
 
   verifyPage(writeBytes: Buffer, pageSize: number, timeout: number) {
     this.log("verify page");
@@ -361,7 +360,7 @@ export default class STK500v1 {
       responseLength: expectedResponse.length,
       timeout,
     }); 
-  };
+  }
 
   async reset() {
     this.log('reset');
@@ -392,5 +391,5 @@ export default class STK500v1 {
     await this.exitProgrammingMode(opt.timeout);
 
     this.log('bootload complete');
-  };
+  }
 }
