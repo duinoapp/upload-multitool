@@ -4,8 +4,8 @@ interface StubDef {
   data: Buffer;
   text: Buffer;
   entry: number;
-  text_start: number;
-  data_start: number;
+  textStart: number;
+  dataStart: number;
 }
 
 interface StubCache {
@@ -18,7 +18,8 @@ export default class StubLoader {
   stubsUrl: string
 
   constructor(stubsUrl?: string) {
-    this.stubsUrl = stubsUrl || 'https://raw.githubusercontent.com/duinoapp/duinoapp-client/master/public/stubs';
+    // TODO; Change branch from esp-support to main
+    this.stubsUrl = stubsUrl || 'https://raw.githubusercontent.com/duinoapp/upload-multitool/esp-support/src/esp/stubs/';
     this.stubsUrl = this.stubsUrl.replace(/\/$/, '');
   }
 
@@ -33,8 +34,8 @@ export default class StubLoader {
       data: Buffer.from(res.data, 'base64'),
       text: Buffer.from(res.text, 'base64'),
       entry: res.entry,
-      text_start: res.text_start,
-      data_start: res.data_start,
+      textStart: res.textStart,
+      dataStart: res.dataStart,
     } as StubDef;
 
     cache[stubName] = stub;

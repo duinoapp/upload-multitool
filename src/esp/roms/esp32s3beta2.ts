@@ -1,3 +1,9 @@
+import ESPLoader from '../ESPLoader';
+
+interface flashSizes {
+  [key: string]: number;
+}
+
 export default class ESP32S3BETA2ROM {
   static CHIP_NAME = 'ESP32-S3';
 
@@ -6,26 +12,32 @@ export default class ESP32S3BETA2ROM {
   static CHIP_DETECT_MAGIC_VALUE = 0xeb004136;
 
   // eslint-disable-next-line no-unused-vars
-  static get_pkg_version = async (loader) => {
+  static async get_pkg_version(loader: ESPLoader) {
+    throw new Error('Not implemented');
   }
 
   // eslint-disable-next-line no-unused-vars
-  static get_chip_revision = async (loader) => {
+  static async get_chip_revision(loader: ESPLoader) {
+    throw new Error('Not implemented');
   }
 
   // eslint-disable-next-line no-unused-vars
-  static get_chip_description = async (loader) => {
+  static async get_chip_description(loader: ESPLoader) {
+    throw new Error('Not implemented');
   }
 
   // eslint-disable-next-line no-unused-vars
-  static get_chip_features = async (loader) => {
+  static async get_chip_features(loader: ESPLoader) {
+    throw new Error('Not implemented');
   }
 
   // eslint-disable-next-line no-unused-vars
-  static get_crystal_freq = async (loader) => {
+  static async get_crystal_freq(loader: ESPLoader) {
+    throw new Error('Not implemented');
   }
 
   // eslint-disable-next-line no-unused-vars
-  static read_mac = async (loader) => {
+  static async read_mac(loader: ESPLoader) {
+    throw new Error('Not implemented');
   }
 }

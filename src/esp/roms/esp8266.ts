@@ -1,3 +1,9 @@
+import ESPLoader from '../ESPLoader';
+
+interface flashSizes {
+  [key: string]: number;
+}
+
 export default class ESP8266ROM {
   static CHIP_NAME = 'ESP8266';
 
@@ -42,25 +48,27 @@ export default class ESP8266ROM {
     '4MB-c1': 0x60,
     '8MB': 0x80,
     '16MB': 0x90,
-  }
+  } as flashSizes
 
   static BOOTLOADER_FLASH_OFFSET = 0
+
+  static UART_DATE_REG_ADDR = 0
 
   static MEMORY_MAP = [[0x3FF00000, 0x3FF00010, 'DPORT'],
     [0x3FFE8000, 0x40000000, 'DRAM'],
     [0x40100000, 0x40108000, 'IRAM'],
     [0x40201010, 0x402E1010, 'IROM']]
 
-  static get_efuses = async (loader) => {
+  static async getEfuses(loader: ESPLoader) {
     // Return the 128 bits of ESP8266 efuse as a single integer
-    const result = (await loader.read_reg({ addr: 0x3ff0005c }) << 96)
-      | (await loader.read_reg({ addr: 0x3ff00058 }) << 64)
-      | (await loader.read_reg({ addr: 0x3ff00054 }) << 32)
-      | await loader.read_reg({ addr: 0x3ff00050 });
+    const result = (await loader.readReg(0x3ff0005c) << 96)
+      | (await loader.readReg(0x3ff00058) << 64)
+      | (await loader.readReg(0x3ff00054) << 32)
+      | await loader.readReg(0x3ff00050);
     return result;
   }
 
-  static _get_flash_size = (efuses) => {
+  static #getFlashSize(efuses: number) {
     // rX_Y = EFUSE_DATA_OUTX[Y]
     const r0_4 = (efuses & (1 << 4)) !== 0;
     const r3_25 = (efuses & (1 << 121)) !== 0;
@@ -84,73 +92,72 @@ export default class ESP8266ROM {
     return -1;
   }
 
-  static get_chip_description = async (loader) => {
-    const efuses = await this.get_efuses(loader);
-    const is_8285 = (efuses & (((1 << 4) | 1) << 80)) !== 0; // One or the other efuse bit is set for ESP8285
-    if (is_8285) {
-      const flash_size = this._get_flash_size(efuses);
-      const max_temp = (efuses & (1 << 5)) !== 0; // This efuse bit identifies the max flash temperature
-      const chip_name = {
-        1: max_temp ? 'ESP8285H08' : 'ESP8285N08',
-        2: max_temp ? 'ESP8285H16' : 'ESP8285N16',
-      }[flash_size] || 'ESP8285';
-      return chip_name;
+  static async getChipDescription(loader: ESPLoader) {
+    const efuses = await this.getEfuses(loader);
+    const is8285 = (efuses & (((1 << 4) | 1) << 80)) !== 0; // One or the other efuse bit is set for ESP8285
+    if (is8285) {
+      const flashSize = this.#getFlashSize(efuses);
+      const maxTemp = (efuses & (1 << 5)) !== 0; // This efuse bit identifies the max flash temperature
+      let chipName = 'ESP8285';
+      if (flashSize === 1) chipName = maxTemp ? 'ESP8285H08' : 'ESP8285N08';
+      if (flashSize === 2) chipName = maxTemp ? 'ESP8285H16' : 'ESP8285N16';
+      return chipName;
     }
     return 'ESP8266EX';
   }
 
-  static get_chip_features = async (loader) => {
+  static async getChipFeatures(loader: ESPLoader) {
     const features = ['WiFi'];
-    if (await this.get_chip_description(loader) === 'ESP8285') {
+    if (await this.getChipDescription(loader) === 'ESP8285') {
       features.push('Embedded Flash');
     }
     return features;
   }
 
-  static flash_spi_attach = async (loader, hspi_arg) => {
-    if (this.IS_STUB) {
-      await super.flash_spi_attach(loader, hspi_arg);
-    } else {
-      // ESP8266 ROM has no flash_spi_attach command in serial protocol,
-      // but flash_begin will do it
-      await loader.flash_begin(0, 0);
-    }
-  }
+  // static flash_spi_attach = async (loader, hspi_arg) => {
+  //   if (this.IS_STUB) {
+  //     await super.flash_spi_attach(loader, hspi_arg);
+  //   } else {
+  //     // ESP8266 ROM has no flash_spi_attach command in serial protocol,
+  //     // but flash_begin will do it
+  //     await loader.flash_begin(0, 0);
+  //   }
+  // }
 
-  static flash_set_parameters = async (loader, size) => {
-    // not implemented in ROM, but OK to silently skip for ROM
-    if (this.IS_STUB) {
-      await super.flash_set_parameters(loader, size);
-    }
-  }
+  // static flash_set_parameters = async (loader, size) => {
+  //   // not implemented in ROM, but OK to silently skip for ROM
+  //   if (this.IS_STUB) {
+  //     await super.flash_set_parameters(loader, size);
+  //   }
+  // }
 
-  static chip_id = async (loader) => {
+  static async chipId(loader: ESPLoader) {
     // Read Chip ID from efuse - the equivalent of the SDK system_get_chip_id() function
-    const id0 = await loader.read_reg({ addr: this.ESP_OTP_MAC0 });
-    const id1 = await loader.read_reg({ addr: this.ESP_OTP_MAC1 });
+    const id0 = await loader.readReg(this.ESP_OTP_MAC0);
+    const id1 = await loader.readReg(this.ESP_OTP_MAC1);
     return (id0 >> 24) | ((id1 & 0xffffff) << 8);
   }
 
-  static read_mac = async (loader) => {
+  static async readMac(loader: ESPLoader) {
     // Read MAC from OTP ROM
-    const mac0 = await loader.read_reg({ addr: this.ESP_OTP_MAC0 });
-    const mac1 = await loader.read_reg({ addr: this.ESP_OTP_MAC1 });
-    const mac3 = await loader.read_reg({ addr: this.ESP_OTP_MAC3 });
+    const mac0 = await loader.readReg(this.ESP_OTP_MAC0);
+    const mac1 = await loader.readReg(this.ESP_OTP_MAC1);
+    const mac3 = await loader.readReg(this.ESP_OTP_MAC3);
     let oui;
     if (mac3 !== 0) {
-      oui = ((mac3 >> 16) & 0xff, (mac3 >> 8) & 0xff, mac3 & 0xff);
+      oui = [(mac3 >> 16) & 0xff, (mac3 >> 8) & 0xff, mac3 & 0xff];
     } else if (((mac1 >> 16) & 0xff) === 0) {
-      oui = (0x18, 0xfe, 0x34);
+      oui = [0x18, 0xfe, 0x34];
     } else if (((mac1 >> 16) & 0xff) === 1) {
-      oui = (0xac, 0xd0, 0x74);
+      oui = [0xac, 0xd0, 0x74];
     } else {
-      throw ('Unknown OUI');
+      throw new Error('Unknown OUI');
     }
-    return oui + ((mac1 >> 8) & 0xff, mac1 & 0xff, (mac0 >> 24) & 0xff);
+    return [...oui, (mac1 >> 8) & 0xff, mac1 & 0xff, (mac0 >> 24) & 0xff];
   }
 
-  static get_erase_size = (offset, size) => size
+  static getEraseSize(offset: number, size: number) { return size; }
 
   // eslint-disable-next-line no-unused-vars
-  static get_crystal_freq = async (loader) => 40
+  static async getCrystalFreq(loader: ESPLoader) { return 40; }
 }

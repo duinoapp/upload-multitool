@@ -1,3 +1,9 @@
+import ESPLoader from '../ESPLoader';
+
+interface flashSizes {
+  [key: string]: number;
+}
+
 export default class ESP32S2ROM {
   static CHIP_NAME = 'ESP32-S2';
 
@@ -23,7 +29,7 @@ export default class ESP32S2ROM {
 
   static FLASH_SIZES = {
     '1MB': 0x00, '2MB': 0x10, '4MB': 0x20, '8MB': 0x30, '16MB': 0x40,
-  };
+  } as flashSizes;
 
   static SPI_REG_BASE = 0x3f402000;
 
@@ -39,56 +45,56 @@ export default class ESP32S2ROM {
 
   static SPI_MISO_DLEN_OFFS = 0x28;
 
-  static get_pkg_version = async (loader) => {
-    const num_word = 3;
-    const block1_addr = this.EFUSE_BASE + 0x044;
-    const addr = block1_addr + (4 * num_word);
-    const word3 = await loader.read_reg({ addr });
-    const pkg_version = (word3 >> 21) & 0x0F;
-    return pkg_version;
+  static async getPkgVersion(loader: ESPLoader) {
+    const numWord = 3;
+    const block1Addr = this.EFUSE_BASE + 0x044;
+    const addr = block1Addr + (4 * numWord);
+    const word3 = await loader.readReg(addr);
+    const pkgVersion = (word3 >> 21) & 0x0F;
+    return pkgVersion;
   }
 
-  static get_chip_description = async (loader) => {
-    const chip_desc = ['ESP32-S2', 'ESP32-S2FH16', 'ESP32-S2FH32'];
-    const pkg_ver = await this.get_pkg_version(loader);
-    if (pkg_ver >= 0 && pkg_ver <= 2) {
-      return chip_desc[pkg_ver];
+  static async getChipDescription(loader: ESPLoader) {
+    const chipDesc = ['ESP32-S2', 'ESP32-S2FH16', 'ESP32-S2FH32'];
+    const pkgVer = await this.getPkgVersion(loader);
+    if (pkgVer >= 0 && pkgVer <= 2) {
+      return chipDesc[pkgVer];
     }
     return 'unknown ESP32-S2';
   }
 
-  static get_chip_features = async (loader) => {
+  static async getChipFeatures(loader: ESPLoader) {
     const features = ['Wi-Fi'];
-    const pkg_ver = await this.get_pkg_version(loader);
-    if (pkg_ver === 1) {
+    const pkgVer = await this.getPkgVersion(loader);
+    if (pkgVer === 1) {
       features.push('Embedded 2MB Flash');
-    } else if (pkg_ver === 2) {
+    } else if (pkgVer === 2) {
       features.push('Embedded 4MB Flash');
     }
-    const num_word = 4;
-    const block2_addr = this.EFUSE_BASE + 0x05C;
-    const addr = block2_addr + (4 * num_word);
-    const word4 = await loader.read_reg({ addr });
-    const block2_ver = (word4 >> 4) & 0x07;
+    const numWord = 4;
+    const block2Addr = this.EFUSE_BASE + 0x05C;
+    const addr = block2Addr + (4 * numWord);
+    const word4 = await loader.readReg(addr);
+    const block2Ver = (word4 >> 4) & 0x07;
 
-    if (block2_ver === 1) {
+    if (block2Ver === 1) {
       features.push('ADC and temperature sensor calibration in BLK2 of efuse');
     }
     return features;
   }
 
   // eslint-disable-next-line no-unused-vars
-  static get_crystal_freq = async (loader) => 40
+  static async getCrystalFreq(loader: ESPLoader) { return 40; }
 
-  static _d2h(d) {
-    const h = (+d).toString(16);
+  static #d2h(d: number) {
+    const h = (Number(d)).toString(16);
     return h.length === 1 ? `0${h}` : h;
   }
 
-  static read_mac = async (loader) => {
-    let mac0 = await loader.read_reg({ addr: this.MAC_EFUSE_REG });
+  static readMac = async (loader: ESPLoader) => {
+    let mac0 = await loader.readReg(this.MAC_EFUSE_REG);
     mac0 >>>= 0;
-    let mac1 = await loader.read_reg({ addr: this.MAC_EFUSE_REG + 4 });
+    let mac1 = await loader.readReg(this.MAC_EFUSE_REG + 4);
     mac1 = (mac1 >>> 0) & 0x0000ffff;
     const mac = new Uint8Array(6);
     mac[0] = (mac1 >> 8) & 0xff;
@@ -99,19 +105,19 @@ export default class ESP32S2ROM {
     mac[5] = mac0 & 0xff;
 
     return (`${
-      this._d2h(mac[0])
+      this.#d2h(mac[0])
     }:${
-      this._d2h(mac[1])
+      this.#d2h(mac[1])
     }:${
-      this._d2h(mac[2])
+      this.#d2h(mac[2])
     }:${
-      this._d2h(mac[3])
+      this.#d2h(mac[3])
     }:${
-      this._d2h(mac[4])
+      this.#d2h(mac[4])
     }:${
-      this._d2h(mac[5])
+      this.#d2h(mac[5])
     }`);
   }
 
-  static get_erase_size = (offset, size) => size
+  static getEraseSize = (offset: number, size: number) => size
 }
