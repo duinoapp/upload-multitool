@@ -2,12 +2,8 @@ import { SerialPort } from 'serialport/dist/index.d';
 import pako from 'pako';
 import CryptoJS from 'crypto-js';
 import StubLoader from './StubLoader';
-
-import ESP32ROM from './roms/esp32';
-import ESP32C3ROM from './roms/esp32c3';
-import ESP32S2ROM from './roms/esp32s2';
-// import ESP32S3BETA2ROM from './roms/esp32s3beta2';
-import ESP8266ROM from './roms/esp8266';
+import roms from './roms';
+import ROM from './roms/rom';
 
 interface ESPOptions {
   quiet?: boolean;
@@ -78,12 +74,7 @@ export default class ESPLoader {
     quiet: boolean;
     serial: SerialPort;
     IS_STUB: boolean;
-    chip: typeof ESP32ROM
-      | typeof ESP32C3ROM
-      | typeof ESP32S2ROM
-      // | typeof ESP32S3BETA2ROM
-      | typeof ESP8266ROM
-      | null;
+    chip: ROM | null;
     stdout: any;
     stubLoader: StubLoader;
     syncStubDetected: boolean;
@@ -154,15 +145,15 @@ export default class ESPLoader {
 
     // convert data before sending to https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol
     async write(data: Buffer) {
-      const slipped_arr = [];
+      const slippedArr = [];
       for (let i = 0; i < data.length; i++) {
-        if (i === 0xC0) slipped_arr.push(0xDB, 0xDC); // escape the end char
-        else if (i === 0xDB) slipped_arr.push(0xDB, 0xDD); // escape the escape char
-        else slipped_arr.push(data[i]);
+        if (i === 0xC0) slippedArr.push(0xDB, 0xDC); // escape the end char
+        else if (i === 0xDB) slippedArr.push(0xDB, 0xDD); // escape the escape char
+        else slippedArr.push(data[i]);
       }
       const pkt = Buffer.from([
         0xC0,
-        ...slipped_arr,
+        ...slippedArr,
         0xC0,
       ]);
       return this.serial.write(pkt);
@@ -263,7 +254,7 @@ export default class ESPLoader {
           const val = this.#byteArrayToInt([p[4], p[5], p[6], p[7]]);
           // eslint-disable-next-line no-console
           // console.log(`Resp ${resp} ${op_ret} ${op} ${len_ret} ${val} ${p}`);
-          const datum = p.slice(8);
+          const datum = p.subarray(8);
           if (!op || op_ret === op) {
             return [val, datum];
           }
@@ -384,17 +375,10 @@ export default class ESPLoader {
       await this.#flushInput();
 
       if (!detecting) {
-        const chip_magic_value = await this.readReg(0x40001000);
+        const chipMagicValue = await this.readReg(0x40001000);
         // eslint-disable-next-line no-console
         // console.log(`Chip Magic ${chip_magic_value}`);
-        const chips = [
-          ESP8266ROM,
-          ESP32ROM,
-          ESP32S2ROM,
-          // ESP32S3BETA2ROM,
-          ESP32C3ROM
-        ];
-        this.chip = chips.find((cls) => chip_magic_value === cls.CHIP_DETECT_MAGIC_VALUE) ?? null;
+        this.chip = roms.find((cls) => chipMagicValue === cls.CHIP_DETECT_MAGIC_VALUE) ?? null;
         // console.log('chip', this.chip);
       }
       return null;
@@ -602,7 +586,7 @@ export default class ESPLoader {
     }
 
     async runSpiFlashCommand(spiFlashCommand: number, data: Uint8Array, readBits: number) {
-      if (!this.chip) throw new Error('chip not initialized');
+      if (!this.chip?.SPI_REG_BASE) throw new Error('chip not initialized');
       // SPI_USR register flags
       const SPI_USR_COMMAND = (1 << 31);
       const SPI_USR_MISO = (1 << 28);
@@ -714,10 +698,6 @@ export default class ESPLoader {
       return ret;
     }
 
-    toHex(buffer: Buffer) {
-      return buffer.toString('hex');
-    }
-
     async flashMd5sum(addr: number, size: number) {
       const timeout = this.timeoutPerMb(this.MD5_TIMEOUT_PER_MB, size);
       let pkt = this.#appendArray(this.#intToByteArray(addr), this.#intToByteArray(size));
@@ -731,7 +711,7 @@ export default class ESPLoader {
       if (res.length > 16) {
         res = res.subarray(0, 16);
       }
-      const strmd5 = this.toHex(res);
+      const strmd5 = res.toString('hex');
       return strmd5;
     }
 
