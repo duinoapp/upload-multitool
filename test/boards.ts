@@ -5,11 +5,13 @@ import { SerialPort } from 'serialport';
 import { upload } from '../src/index';
 import { waitForData, config, getHex } from './util';
 import { waitForOpen } from '../src/util/serial-helpers';
+import { ProgramFile } from '../src/index.d';
 
 Object.keys(config.devices).forEach((deviceRef) => {
   const device = config.devices[deviceRef];
   let key = '';
-  let hex: Buffer;
+  let hex: Buffer | undefined;
+  let files: ProgramFile[] | undefined;
   let serial: SerialPort;
 
   describe(`upload to ${device.name}`, function () {
@@ -19,6 +21,7 @@ Object.keys(config.devices).forEach((deviceRef) => {
       const res = await getHex(device.code, device.fqbn);
       key = res.key;
       hex = res.hex;
+      files = res.files;
       console.log('compiled hex');
     });
 
@@ -44,6 +47,7 @@ Object.keys(config.devices).forEach((deviceRef) => {
     it(`should upload to ${device.name}`, async () => {
       await upload(serial, {
         hex,
+        files,
         speed: device.speed,
         tool: device.tool,
         cpu: device.cpu,

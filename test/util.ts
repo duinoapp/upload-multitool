@@ -3,6 +3,7 @@ import YAML from 'yaml';
 import fs from 'fs';
 import axios from 'axios';
 import path from 'path';
+import { ProgramFile } from '../src/index.d';
 
 export const waitForData = (
   serial: SerialPort,
@@ -33,7 +34,8 @@ export const waitForData = (
 export const config = YAML.parse(fs.readFileSync(path.join(__dirname, 'test-config.yml'), 'utf8'));
 
 interface HexResult {
-  hex: Buffer;
+  hex?: Buffer;
+  files?: ProgramFile[];
   key: string;
   code: string;
 }
@@ -51,7 +53,8 @@ export const getHex = async (file: string, fqbn: string): Promise<HexResult> => 
     }],
   });
   return {
-    hex: Buffer.from(res.data.hex, 'base64'),
+    hex: res.data.hex ? Buffer.from(res.data.hex, 'base64') : undefined,
+    files: res.data.files as ProgramFile[],
     key,
     code,
   } as HexResult;

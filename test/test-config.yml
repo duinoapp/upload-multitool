@@ -1,26 +1,38 @@
 devices:
-  uno:
-    name: Arduino Uno
-    # Find VID and PID in the Arduino IDE > Tools > Get Board Info
+  # uno:
+  #   name: Arduino Uno
+  #   # Find VID and PID in the Arduino IDE > Tools > Get Board Info
+  #   vendorIds:
+  #     - '2341'
+  #   productIds:
+  #     - '0001'
+  #   code: blink
+  #   fqbn: arduino:avr:uno
+  #   cpu: atmega328p
+  #   tool: avrdude
+  #   speed: 115200
+  # mega:
+  #   name: Arduino Mega 2560
+  #   vendorIds:
+  #     - '2341'
+  #   productIds:
+  #     - '0042'
+  #   code: blink
+  #   fqbn: arduino:avr:mega
+  #   cpu: atmega2560
+  #   tool: avrdude
+  #   speed: 115200
+  nodemcuv2:
+    name: ESP 8266 - Node MCU V2
     vendorIds:
-      - '2341'
+      - '1a86'
     productIds:
-      - '0001'
+      - '7523'
     code: blink
-    fqbn: arduino:avr:uno
-    cpu: atmega328p
-    tool: avrdude
+    fqbn: esp8266:esp8266:nodemcuv2
+    cpu: esp8266
+    tool: esptool
     speed: 115200
-  mega:
-    name: Arduino Mega 2560
-    vendorIds:
-      - '2341'
-    productIds:
-      - '0042'
-    code: blink
-    fqbn: arduino:avr:mega
-    cpu: atmega2560
-    tool: avrdude
-    speed: 115200
-# verbose: true
+
+verbose: true
 compileServer: https://compile.duino.app

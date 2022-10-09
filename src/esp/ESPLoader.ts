@@ -5,7 +5,7 @@ import StubLoader from './StubLoader';
 import roms from './roms';
 import ROM from './roms/rom';
 
-interface ESPOptions {
+export interface ESPOptions {
   quiet?: boolean;
   stubUrl?: string;
   stdout?: any;
