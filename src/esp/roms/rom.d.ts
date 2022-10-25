@@ -7,6 +7,7 @@ interface flashSizes {
 export default interface ROM {
   CHIP_NAME: string;
   IS_STUB: boolean;
+  SUPPORTS_ENCRYPTION?: boolean;
   FLASH_SIZES: flashSizes;
   IMAGE_CHIP_ID?: number;
   CHIP_DETECT_MAGIC_VALUE: number;

@@ -8,7 +8,7 @@ export const waitForOpen = (serial: SerialPort, timeout: number = 1000): Promise
     let cleanup = () => {};
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error('Timeout'));
+      reject(new Error('Timeout opening port'));
     }, timeout);
     const handleOpen = () => {
       cleanup();

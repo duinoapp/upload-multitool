@@ -5,6 +5,7 @@ import { toMac } from './util';
 export default {
   CHIP_NAME: 'ESP32-S2',
   IS_STUB: true,
+  SUPPORTS_ENCRYPTION: true,
   IMAGE_CHIP_ID: 2,
   CHIP_DETECT_MAGIC_VALUE: 0x000007c6,
   MAC_EFUSE_REG: 0x3f41A044,
