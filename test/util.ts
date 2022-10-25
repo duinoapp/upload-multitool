@@ -5,9 +5,9 @@ import axios from 'axios';
 import path from 'path';
 import { SerialPort } from 'serialport';
 import { ProgramFile } from '../src/index.d';
-import ESPLoader from '../src/esp/ESPLoader';
+import ESPLoader from '../src/esp/loader';
 import { waitForOpen } from '../src/util/serial-helpers';
-import asyncTimeout from '../src/util/asyncTimeout';
+import asyncTimeout from '../src/util/async-timeout';
 
 export const waitForData = (
   serial: SerialPort,

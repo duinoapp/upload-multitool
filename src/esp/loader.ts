@@ -1,7 +1,7 @@
 import { SerialPort } from 'serialport/dist/index.d';
 import pako from 'pako';
 import CryptoJS from 'crypto-js';
-import StubLoader from './StubLoader';
+import StubLoader from './stub-loader';
 import roms from './roms';
 import ROM from './roms/rom';
 

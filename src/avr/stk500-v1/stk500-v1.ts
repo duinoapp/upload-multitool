@@ -3,7 +3,7 @@
 
 import { SerialPort } from 'serialport/dist/index.d';
 import { setDTRRTS } from '../../util/serial-helpers';
-import asyncTimeout from '../../util/asyncTimeout';
+import asyncTimeout from '../../util/async-timeout';
 
 interface STK500v1Options {
   quiet?: boolean;

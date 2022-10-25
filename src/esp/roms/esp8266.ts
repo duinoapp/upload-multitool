@@ -1,4 +1,4 @@
-import ESPLoader from '../ESPLoader';
+import ESPLoader from '../loader';
 import ROM from './rom';
 import { toHex } from './util';
 

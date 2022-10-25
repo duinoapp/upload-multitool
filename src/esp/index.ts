@@ -1,7 +1,7 @@
 import { SerialPort } from 'serialport/dist/index.d';
 import { ProgramConfig } from '../index.d';
-import ESPLoader, { ESPOptions, UploadFileDef } from './ESPLoader';
-import asyncTimeout from '../util/asyncTimeout';
+import ESPLoader, { ESPOptions, UploadFileDef } from './loader';
+import asyncTimeout from '../util/async-timeout';
 
 const isSupported = (cpu: string) => ['esp8266', 'esp32'].includes(cpu);
 

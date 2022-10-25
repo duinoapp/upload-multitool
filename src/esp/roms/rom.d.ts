@@ -1,4 +1,4 @@
-import ESPLoader from '../ESPLoader';
+import ESPLoader from '../loader';
 
 interface flashSizes {
   [key: string]: number;
