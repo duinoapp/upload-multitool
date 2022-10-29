@@ -1,3 +1,7 @@
+verbose: true
+# compileServer: https://compile.duino.app
+compileServer: http://localhost:3030
+retries: 2
 devices:
   uno:
     name: Arduino Uno
@@ -11,6 +15,7 @@ devices:
     cpu: atmega328p
     tool: avrdude
     speed: 115200
+
   mega:
     name: Arduino Mega 2560
     vendorIds:
@@ -22,5 +27,34 @@ devices:
     cpu: atmega2560
     tool: avrdude
     speed: 115200
-# verbose: true
-compileServer: https://compile.duino.app
+
+  esp32:
+    # DOIT ESP32 DEVKIT V1 is the closest match
+    name: DOIT ESP32 DEVKIT V1
+    espChip: ESP32-D0WD-V3 (revision 3)
+    code: ping
+    fqbn: esp32:esp32:esp32doit-devkit-v1
+    cpu: esp32
+    tool: esptool
+    speed: 115200
+    uploadSpeed: 921600
+
+  nodemcu:
+    name: ESP 8266 - Node MCU 0.9
+    espChip: ESP8266EX
+    code: blink
+    fqbn: esp8266:esp8266:nodemcu
+    cpu: esp8266
+    tool: esptool
+    speed: 115200
+    uploadSpeed: 921600
+
+  wemos:
+    name: ESP 8266 - LOLIN(WEMOS) D1 mini
+    espChip: ESP8285
+    code: blink
+    fqbn: esp8266:esp8266:d1_mini
+    cpu: esp8266
+    tool: esptool
+    speed: 115200
+    uploadSpeed: 921600
