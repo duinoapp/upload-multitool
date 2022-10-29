@@ -1,6 +1,9 @@
 import { SerialPort } from 'serialport/dist/index.d';
 
 export const waitForOpen = (serial: SerialPort, timeout: number = 1000): Promise<boolean> => {
+  let id = '';
+  // id = Math.random().toString(36).substring(7);
+  // console.log('waitForOpen', id);
   return new Promise((resolve, reject) => {
     if (serial.isOpen) {
       return resolve(true);
@@ -8,7 +11,7 @@ export const waitForOpen = (serial: SerialPort, timeout: number = 1000): Promise
     let cleanup = () => {};
     const timer = setTimeout(() => {
       cleanup();
-      reject(new Error('Timeout opening port'));
+      reject(new Error(`Timeout opening port ${id} (${timeout}ms)`));
     }, timeout);
     const handleOpen = () => {
       cleanup();

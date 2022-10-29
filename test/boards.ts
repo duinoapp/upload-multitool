@@ -3,7 +3,11 @@ import { expect } from 'chai';
 import 'mocha';
 import { SerialPort } from 'serialport';
 import { upload } from '../src/index';
-import { waitForData, config, getHex, espIdentify, ESPIdentifyResult } from './util';
+import {
+  waitForData, waitForDevice,
+  config, getHex,
+  espIdentify, ESPIdentifyResult,
+} from './util';
 import { waitForOpen } from '../src/util/serial-helpers';
 import { ProgramFile } from '../src/index.d';
 
@@ -53,7 +57,7 @@ Object.keys(config.devices).forEach((deviceRef) => {
       if (!port) throw new Error(`could not locate ${device.name}`);
 
       // connect to the device
-      serial = new SerialPort({ path: port.path, baudRate: device.speed });
+      serial = new SerialPort({ path: port.path, baudRate: 115200 });
       await waitForOpen(serial);
       console.log(`connected to ${device.name} on ${port.path}`);
     });
@@ -75,6 +79,11 @@ Object.keys(config.devices).forEach((deviceRef) => {
         tool: device.tool,
         cpu: device.cpu,
         verbose: config.verbose,
+        avr109Reconnect: async () => {
+          const port = await waitForDevice(device);
+          if (!port) throw new Error(`could not locate ${device.name}`);
+          return new SerialPort({ path: port.path, baudRate: 1200 });
+        }
       });
 
       console.log(`uploaded to ${device.name}, validating...`);

@@ -13,4 +13,5 @@ export interface ProgramConfig {
   verbose?: boolean;
   flashMode?: string;
   flashFreq?: string;
+  avr109Reconnect?: () => Promise<SerialPort>;
 }

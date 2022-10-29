@@ -1,6 +1,6 @@
 verbose: true
-# compileServer: https://compile.duino.app
-compileServer: http://localhost:3030
+compileServer: https://compile.duino.app
+# compileServer: http://localhost:3030
 retries: 2
 devices:
   uno:
@@ -28,8 +28,22 @@ devices:
     tool: avrdude
     speed: 115200
 
+  leonardo:
+    name: Arduino Leonardo
+    vendorIds:
+      - '2341'
+      - '2A03'
+    productIds:
+      - '0036'
+      - '8036'
+    code: blink
+    fqbn: arduino:avr:leonardo
+    cpu: atmega32u4
+    tool: avrdude
+    speed: 57600
+
   esp32:
-    # DOIT ESP32 DEVKIT V1 is the closest match
+    # DOIT ESP32 DEVKIT V1 is the closest match to what I have
     name: DOIT ESP32 DEVKIT V1
     espChip: ESP32-D0WD-V3 (revision 3)
     code: ping

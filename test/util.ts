@@ -149,3 +149,13 @@ export const espIdentify = async (espCount: number): Promise<ESPIdentifyResult[]
   }, Promise.resolve());
   return results;
 }
+
+export const waitForDevice = async (device: Device, count = 0): Promise<PortInfo | null> => {
+  const list = await SerialPort.list();
+  // console.log(list.filter(p => p.vendorId));
+  const port = list.find(p => device.vendorIds?.includes(p.vendorId || '') && device.productIds?.includes(p.productId || ''));
+  if (port) return port;
+  if (count > 20) return null;
+  await asyncTimeout(100 + (Math.random() * 500));
+  return waitForDevice(device, count + 1);
+}
