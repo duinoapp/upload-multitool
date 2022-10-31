@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Upload Multitool</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="../dist/index.umd.js"></script>
+    </head>
+    <body>
+        <noscript>
+            You need to enable JavaScript to run this app.
+        </noscript>
+        <div id="app">
+            Loading...
+        </div>
+        <script>
+            const { isSupported } = uploadMultitool;
+            document.getElementById('app').innerHTML = isSupported('avr', 'atmega328p') ? 'Success!' : 'Sorry, your browser does not support the AVR architecture.';
+        </script>
+    </body>
+</html>

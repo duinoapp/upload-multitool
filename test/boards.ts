@@ -9,7 +9,7 @@ import {
   espIdentify, ESPIdentifyResult,
 } from './util';
 import { waitForOpen } from '../src/util/serial-helpers';
-import { ProgramFile } from '../src/index.d';
+import { ProgramFile } from '../src/index';
 
 const numEsps = Object.values(config.devices).filter((d) => d.espChip).length;
 const listPromise = espIdentify(numEsps);

@@ -1,5 +1,5 @@
 import { SerialPort } from 'serialport/dist/index.d';
-import { ProgramConfig } from '../index.d';
+import { ProgramConfig } from '../index';
 
 import intelHex from 'intel-hex';
 import getCpuData from './avr-cpu-data';

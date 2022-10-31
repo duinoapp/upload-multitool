@@ -1,9 +1,26 @@
-import { ProgramConfig } from './index.d';
 import { SerialPort } from 'serialport/dist/index.d';
 
 import { setBaud, waitForOpen } from './util/serial-helpers';
-import avr from './avr';
-import esp from './esp';
+import avr from './avr/index';
+import esp from './esp/index';
+
+export interface ProgramFile {
+  data: string;
+  address: number;
+}
+
+export interface ProgramConfig {
+  hex?: Buffer;
+  files?: ProgramFile[];
+  speed?: number;
+  uploadSpeed?: number;
+  tool?: string;
+  cpu?: string;
+  verbose?: boolean;
+  flashMode?: string;
+  flashFreq?: string;
+  avr109Reconnect?: () => Promise<SerialPort>;
+}
 
 export const upload = async (serial: SerialPort, config: ProgramConfig) => {
   if (!config.hex && !config.files?.length) {

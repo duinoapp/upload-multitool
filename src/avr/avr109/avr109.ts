@@ -1,5 +1,5 @@
 import { SerialPort } from 'serialport/dist/index.d';
-import { setDTRRTS, waitForOpen } from '../../util/serial-helpers';
+import { waitForOpen } from '../../util/serial-helpers';
 import asyncTimeout from '../../util/async-timeout';
 
 import { getDeviceName } from './device-lookup';

@@ -1,5 +1,5 @@
 import { SerialPort } from 'serialport/dist/index.d';
-import { ProgramConfig } from '../index.d';
+import { ProgramConfig } from '../index';
 import ESPLoader, { ESPOptions, UploadFileDef } from './loader';
 import asyncTimeout from '../util/async-timeout';
 

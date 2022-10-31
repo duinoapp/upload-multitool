@@ -1,9 +1,10 @@
 import { SerialPort } from 'serialport/dist/index.d';
 import pako from 'pako';
-import CryptoJS from 'crypto-js';
+import MD5 from 'crypto-js/md5';
+import encBase64 from 'crypto-js/enc-base64';
 import StubLoader from './stub-loader';
-import roms from './roms';
-import ROM from './roms/rom';
+import roms from './roms/index';
+import ROM from './roms/rom.d';
 
 export interface ESPOptions {
   quiet?: boolean;
@@ -91,7 +92,7 @@ export default class ESPLoader {
     this.IS_STUB = false;
     this.chip = null;
     this.stdout = opts.stdout || process?.stdout || {
-      write: (str: string) => console.log(str),
+      write: (str: string) => console.log(str.replace(/(\n|\r)+$/g, '')),
     };
     this.stubLoader = new StubLoader(this.opts.stubUrl);
     this.syncStubDetected = false;
@@ -1055,7 +1056,8 @@ export default class ESPLoader {
       }
       let image = this.#padTo(file.data, 4);
       image = this.#updateImageFlashParams(image, address, flashSize, flashMode, flashFreq);
-      const calcMd5 = CryptoJS.MD5(CryptoJS.enc.Base64.parse(image.toString('base64')));
+      // const calcMd5 = CryptoJS.MD5(CryptoJS.enc.Base64.parse(image.toString('base64')));
+      const calcMd5 = MD5(encBase64.parse(image.toString('base64'))).toString() as string;
       // console.log(`Image MD5 ${calcMd5}`);
       const rawSize = image.length;
       let blocks;
