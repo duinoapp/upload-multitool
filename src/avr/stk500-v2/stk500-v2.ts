@@ -3,9 +3,11 @@ import { SerialPort } from 'serialport/dist/index.d';
 import statics from './constants';
 import { setDTRRTS } from '../../util/serial-helpers';
 import asyncTimeout from '../../util/async-timeout';
+import { StdOut } from '../../index';
 
 interface STK500v2Options {
   quiet?: boolean;
+  stdout?: StdOut;
 }
 
 interface SendCommandOptions {
@@ -55,7 +57,7 @@ export default class STK500v2 {
 
   log(...args: any[]) {
     if (this.quiet) return;
-    console.log(...args);
+    this.opts.stdout?.write(`${args.join(' ')}\r\n`);
   }
 
   receiveData(timeout = 0, responseLength?: number): Promise<Buffer> {

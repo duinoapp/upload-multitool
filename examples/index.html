@@ -1,21 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>Upload Multitool</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <script src="../dist/index.umd.js"></script>
-    </head>
-    <body>
-        <noscript>
-            You need to enable JavaScript to run this app.
-        </noscript>
-        <div id="app">
-            Loading...
-        </div>
-        <script>
-            const { isSupported } = uploadMultitool;
-            document.getElementById('app').innerHTML = isSupported('avr', 'atmega328p') ? 'Success!' : 'Sorry, your browser does not support the AVR architecture.';
-        </script>
-    </body>
+  <head>
+    <title>Upload Multitool</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="../dist/index.umd.js"></script>
+    <script src="../dist/web-serialport.umd.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.0.0/css/xterm.css">
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.0.0/lib/xterm.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+  </head>
+  <body>
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <div id="app">
+      <div>
+        <h1>Upload Multitool</h1>
+        <p>
+          This is a demo of the Upload Multitool.
+          It allows you to upload binaries to a microcontroller using a wide range of upload protocols.
+        </p>
+        <p>
+          Select a device test config below.
+        </p>
+        <select id="device"></select>
+        <button id="upload" disabled>Upload</button>
+        <button id="reconnect" disabled>Reconnect</button>
+      </div>
+      <div id="status"></div>
+      <div id="terminal"></div>
+    </div>
+    <script>
+      const { isSupported, upload } = uploadMultitool;
+
+      const setStatus = (status) => {
+        document.getElementById('status').innerHTML = status;
+      };
+      const asyncTimeout = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      setStatus('Loading...');
+
+      const deviceSelectEl = document.getElementById('device');
+      const uploadButtonEl = document.getElementById('upload');
+      const reconnectButtonEl = document.getElementById('reconnect');
+      
+      const term = new Terminal();
+      term.open(document.getElementById('terminal'));
+
+      let config = { devices: {} };
+      let reconnectResolve;
+      let reconnectReject;
+      let reconnectOpts;
+
+      const getFilters = (deviceConfig) => {
+        const filters = [];
+        if (deviceConfig.espChip || deviceConfig.mac) {
+          filters.push({ usbVendorId: 0x1a86, usbProductId: 0x7523 });
+        } else if (deviceConfig.vendorIds && deviceConfig.productIds) {
+          deviceConfig.vendorIds.forEach((vendorId) => {
+            deviceConfig.productIds.forEach((productId) => {
+              filters.push({
+                usbVendorId: parseInt(vendorId, 16),
+                usbProductId: parseInt(productId, 16),
+              });
+            });
+          });
+        }
+        return filters;
+      };
+
+      const getBin = async (file, fqbn) => {
+        const key = Math.random().toString(16).substring(7);
+        const code = await fetch(`../test/code/${file}.ino`)
+          .then((r) => r.text())
+          .then(txt => txt.replace(/{{key}}/g, key));
+        const res = await fetch(`${config.compileServer}/v3/compile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fqbn,
+            files: [{
+              content: code,
+              name: `${file}/${file}.ino`,
+            }],
+          }),
+        }).then((r) => r.json());
+        return { bin: res.hex, key, code, ...res };
+      };
+
+      const validateUpload = (serial, key) => new Promise((resolve, reject) => {
+        let cleanup;
+        const timeout = setTimeout(() => {
+          cleanup(new Error('Timeout validating upload'));
+        }, 10000);
+        const onData = (data) => {
+          if (data.toString('ascii').includes(key)) {
+            cleanup();
+          }
+        };
+        const onError = (err) => {
+          cleanup(err);
+        };
+        cleanup = (err) => {
+          clearTimeout(timeout);
+          serial.removeListener('data', onData);
+          serial.removeListener('error', onError);
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        };
+        serial.on('data', onData);
+        serial.on('error', onError);
+        serial.write('ping\n');
+      });
+
+      deviceSelectEl.addEventListener('change', async (e) => {
+        const device = e.target.value;
+        const deviceConfig = config.devices[device];
+        if (!deviceConfig) return;
+        const { tool, cpu, name } = deviceConfig;
+        const isSupp = isSupported(tool, cpu);
+        setStatus(`${name} is ${isSupp ? '' : 'not '}Supported!`);
+        uploadButtonEl.disabled = !isSupp;
+
+      });
+
+      reconnectButtonEl.addEventListener('click', async () => {
+        if (!deviceSelectEl.value) return;
+        const deviceConfig = config.devices[deviceSelectEl.value];
+        if (!deviceConfig) return;
+        if (!reconnectResolve) return;
+        const filters = getFilters(deviceConfig);
+        try {
+          const port = await WebSerialPort.requestPort(
+            { filters },
+            reconnectOpts,
+          );
+          if (!port) throw new Error(`could not locate ${deviceConfig.name}`);
+          else reconnectResolve(port);
+        } catch (err) {
+          reconnectReject(err);
+        }
+        reconnectButtonEl.disabled = true;
+      });
+
+      uploadButtonEl.addEventListener('click', async () => {
+        if (!deviceSelectEl.value) return;
+        const deviceConfig = config.devices[deviceSelectEl.value];
+        if (!deviceConfig) return;
+        uploadButtonEl.disabled = true;
+        term.clear();
+
+        try {
+          setStatus('Requesting Device...');
+          filters = getFilters(deviceConfig);
+          WebSerialPort.list().then(console.log);
+          const serial = await WebSerialPort.requestPort(
+            { filters },
+            { baudRate: deviceConfig.speed || 115200 },
+          );
+
+          setStatus('Compiling Device Code...');
+          const {
+            bin, files, flashMode, flashFreq, key,
+          } = await getBin(deviceConfig.code, deviceConfig.fqbn);
+
+          setStatus('Uploading...');
+          await upload(serial, {
+            bin,
+            files,
+            flashMode,
+            flashFreq,
+            speed: deviceConfig.speed,
+            uploadSpeed: deviceConfig.uploadSpeed,
+            tool: deviceConfig.tool,
+            cpu: deviceConfig.cpu,
+            verbose: true,
+            stdout: term,
+            avr109Reconnect: async (opts) => {
+              console.log(opts);
+              // await asyncTimeout(200);
+              const list = await WebSerialPort.list();
+              const dev = list.find(d => deviceConfig.productIds.includes(d.productId) && deviceConfig.vendorIds.includes(d.vendorId));
+              console.log(dev, dev?.port);
+              if (dev) return new WebSerialPort(dev.port, opts);
+              reconnectOpts = opts;
+              return new Promise((resolve, reject) => {
+                reconnectResolve = resolve;
+                reconnectReject = reject;
+                reconnectButtonEl.disabled = false;
+              });
+            }
+          });
+
+          setStatus('Validating Upload...');
+          await validateUpload(serial, key);
+          setStatus('Cleaning Up...');
+          await serial.close();
+          setStatus('Done! Success! Awesome!');
+        } catch (err) {
+          console.error(err);
+          setStatus(`Error: ${err.message}`);
+        }
+        uploadButtonEl.disabled = false;
+      });
+
+      (async () => {
+        config = jsyaml.load(await fetch('../test/test-config.yml').then(r => r.text()));
+        console.log(config);
+        Object.keys(config.devices).forEach(id => {
+          const device = config.devices[id];
+          const option = document.createElement('option');
+          option.value = id;
+          option.innerText = device.name;
+          deviceSelectEl.appendChild(option);
+        });
+        deviceSelectEl.value = '';
+
+        if (!isSupported('avr', 'atmega328p')) {
+          return setStatus('Error: Could not load uploader.');
+        }
+        if (!navigator.serial) {
+          return setStatus('Error: Could not load web Serial API.');
+        }
+        setStatus('Ready.');
+        console.log(await WebSerialPort.list());
+      })();
+    </script>
+  </body>
 </html>

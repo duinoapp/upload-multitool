@@ -5,11 +5,12 @@ import encBase64 from 'crypto-js/enc-base64';
 import StubLoader from './stub-loader';
 import roms from './roms/index';
 import ROM from './roms/rom.d';
+import { StdOut } from '../index';
 
 export interface ESPOptions {
   quiet?: boolean;
   stubUrl?: string;
-  stdout?: any;
+  stdout?: StdOut;
 }
 
 export interface UploadFileDef {
@@ -107,7 +108,7 @@ export default class ESPLoader {
   // log out a line of text
   log (...args: any[]) {
     if (this.quiet) return;
-    this.stdout.write(`${args.map(arg => `${arg}`).join(' ')}\n`);
+    this.stdout.write(`${args.map(arg => `${arg}`).join(' ')}\r\n`);
   }
 
   // log out a set of characters

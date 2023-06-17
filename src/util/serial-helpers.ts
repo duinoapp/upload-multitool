@@ -19,7 +19,7 @@ export const waitForOpen = (serial: SerialPort, timeout: number = 1000): Promise
     };
     serial.on('open', handleOpen);
     cleanup = () => {
-      serial.off('open', handleOpen);
+      serial.removeListener('open', handleOpen);
       clearTimeout(timer);
     }
   });

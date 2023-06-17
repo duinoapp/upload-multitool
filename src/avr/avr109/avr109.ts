@@ -1,8 +1,13 @@
 import { SerialPort } from 'serialport/dist/index.d';
-import { waitForOpen } from '../../util/serial-helpers';
+import { waitForOpen, setDTRRTS } from '../../util/serial-helpers';
 import asyncTimeout from '../../util/async-timeout';
+import { StdOut } from '../../index';
 
 import { getDeviceName } from './device-lookup';
+
+export interface ReconnectParams {
+  baudRate: number;
+}
 
 interface AVR109Options {
   quiet?: boolean;
@@ -11,7 +16,8 @@ interface AVR109Options {
   testBlockMode?: boolean;
   deviceCode?: number;
   writeToEeprom?: boolean;
-  avr109Reconnect: () => Promise<SerialPort>;
+  stdout?: StdOut;
+  avr109Reconnect: (opts: ReconnectParams) => Promise<SerialPort>;
 }
 
 interface ReceiveOptions {
@@ -102,7 +108,7 @@ export default class AVR109 {
 
   log (...args: any[]) {
     if (this.quiet) return;
-    console.log(...args);
+    this.opts.stdout?.write(`${args.join(' ')}\r\n`);
   }
 
   async send(data: Buffer | string | number) {
@@ -113,7 +119,7 @@ export default class AVR109 {
     if (typeof data === 'number') {
       buf = Buffer.from([data]);
     }
-    await this.serial.write(buf);
+    await (new Promise((resolve, reject) => this.serial.write(buf, undefined, (err) => (err ? reject(err) : resolve(0)))));
   }
 
   recv(opts: ReceiveOptions): Promise<Buffer> {
@@ -424,7 +430,7 @@ export default class AVR109 {
     return rdData.equals(data);
   }
 
-  reconnect(): Promise<SerialPort> {
+  reconnect(opts: ReconnectParams): Promise<SerialPort> {
     return new Promise((resolve, reject) => {
       let res = (serial: SerialPort) => {};
       const timeoutId = setTimeout(res, 30 * 1000);
@@ -437,24 +443,38 @@ export default class AVR109 {
           resolve(serial);
         }
       };
-      this.opts.avr109Reconnect().then(res).catch(reject);
+      this.opts.avr109Reconnect(opts).then(res).catch(reject);
     });
   }
 
   async enterBootloader() {
     if (!this.serial.isOpen) {
-      await this.serial.open();
+      if (!this.serial.opening) await this.serial.open();
       await waitForOpen(this.serial);
     }
-    await this.serial.update({ baudRate: 1200 });
+    await (new Promise((resolve) => this.serial.update({ baudRate: 1200 }, resolve)));
     await asyncTimeout(500);
-    await this.serial.close();
-    await asyncTimeout(500);
-    this.serial = await this.reconnect();
+    // await setDTRRTS(this.serial, false);
+    // await asyncTimeout(20);
+    // await setDTRRTS(this.serial, true);
+    // await asyncTimeout(20);
+    // await setDTRRTS(this.serial, false);
+    // await asyncTimeout(20);
+    // await setDTRRTS(this.serial, true);
+    // await this.serial.close();
+    // await this.serial.open();
+    const ts = Date.now();
+    await (new Promise((resolve) => this.serial.close(resolve)));
+    this.serial = await this.reconnect({ baudRate: this.opts.speed || 57600 });
     if (!this.serial.isOpen) {
       await waitForOpen(this.serial);
     }
-    await this.serial.update({ baudRate: this.opts.speed || 57600 });
+    console.log(this.serial?.port);
+    if (this.serial.baudRate !== this.opts.speed) {
+      await this.serial.update({ baudRate: this.opts.speed || 57600 });
+    }
+    await asyncTimeout(200);
+    console.log('reconnected', Date.now() - ts);
   }
 
   async exitBootloader() {
@@ -462,9 +482,22 @@ export default class AVR109 {
     await this.serial.close();
   }
 
+  async sync(count = 0): Promise<void> {
+    try {
+      await this.cmd({ cmd: statics.CMD_RETURN_SOFTWARE_ID, len: 7 });
+    } catch (err: any) {
+      if (!err.message?.includes('receiveData timeout after')) throw err;
+      if (count > 5) throw new Error('Failed to connect to bootloader');
+      console.error(err);
+      return this.sync(count + 1);
+    }
+  }
+
   async bootload(data: Buffer, opt: BootloadOptions) {
     this.log('Entering bootloader');
     await this.enterBootloader();
+    this.log('Synchronising');
+    await this.sync();
     this.log('Initialising');
     await this.init();
     this.log('Erasing Chip');

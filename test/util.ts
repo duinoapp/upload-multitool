@@ -61,7 +61,7 @@ interface TestConfig {
 export const config = YAML.parse(fs.readFileSync(path.join(__dirname, 'test-config.yml'), 'utf8')) as TestConfig;
 
 interface HexResult {
-  hex?: Buffer;
+  bin?: Buffer;
   files?: ProgramFile[];
   key: string;
   code: string;
@@ -69,7 +69,7 @@ interface HexResult {
   flashFreq?: string;
 }
 
-export const getHex = async (file: string, fqbn: string): Promise<HexResult> => {
+export const getBin = async (file: string, fqbn: string): Promise<HexResult> => {
   const key = Math.random().toString(16).substring(7);
   const code = fs
     .readFileSync(path.join(__dirname, `code/${file}.ino`), 'utf8')
@@ -84,7 +84,7 @@ export const getHex = async (file: string, fqbn: string): Promise<HexResult> => 
   // console.log({ ...res.data, files: null });
   // fs.writeFileSync(path.join(__dirname, `compiled-data.json`), JSON.stringify(res.data, null, 2));
   return {
-    hex: res.data.hex ? Buffer.from(res.data.hex, 'base64') : undefined,
+    bin: res.data.hex ? Buffer.from(res.data.hex, 'base64') : undefined,
     files: res.data.files as ProgramFile[],
     key,
     code,

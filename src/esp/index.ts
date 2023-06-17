@@ -20,6 +20,7 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
   try {
     espLoader = new ESPLoader(serial, {
       quiet: !config.verbose,
+      stdout: config.stdout,
     } as ESPOptions);
     await espLoader.mainFn();
     // await espLoader.flash_id();

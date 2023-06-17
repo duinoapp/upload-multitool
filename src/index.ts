@@ -1,6 +1,7 @@
 import { SerialPort } from 'serialport/dist/index.d';
 
 import { setBaud, waitForOpen } from './util/serial-helpers';
+import { ReconnectParams } from './avr/avr109/avr109';
 import avr from './avr/index';
 import esp from './esp/index';
 
@@ -9,8 +10,12 @@ export interface ProgramFile {
   address: number;
 }
 
+export interface StdOut {
+  write: (data: string) => void;
+}
+
 export interface ProgramConfig {
-  hex?: Buffer;
+  bin?: Buffer | string;
   files?: ProgramFile[];
   speed?: number;
   uploadSpeed?: number;
@@ -19,16 +24,28 @@ export interface ProgramConfig {
   verbose?: boolean;
   flashMode?: string;
   flashFreq?: string;
-  avr109Reconnect?: () => Promise<SerialPort>;
+  avr109Reconnect?: (opts: ReconnectParams) => Promise<SerialPort>;
+  stdout?: StdOut;
 }
 
 export const upload = async (serial: SerialPort, config: ProgramConfig) => {
-  if (!config.hex && !config.files?.length) {
+  if (!config.bin && !config.files?.length) {
     throw new Error('No hex or files provided for upload');
+  }
+  if (!config.bin && config.files?.length) {
+    config.bin = Buffer.from(config.files[0].data, 'base64');
+  }
+  if (typeof config.bin === 'string') {
+    config.bin = Buffer.from(config.bin, 'base64');
+  }
+  if (!config.stdout) {
+    config.stdout = process?.stdout || {
+      write: (str: string) => console.log(str.replace(/(\n|\r)+$/g, '')),
+    };
   }
   // ensure serial port is open
   if (!serial.isOpen) {
-    serial.open();
+    if (!serial.opening) serial.open();
     await waitForOpen(serial);
   }
 

@@ -12,9 +12,12 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
   let uploader = null as STK500v2 | STK500v1 | AVR109 | null;
   switch (cpuData.protocol) {
     case 'stk500v1':
-      uploader = new STK500v1(serial, { quiet: !config.verbose });
+      uploader = new STK500v1(serial, {
+        quiet: !config.verbose,
+        stdout: config.stdout,
+      });
       await uploader.bootload(
-        intelHex.parse(config.hex || '').data,
+        intelHex.parse(config.bin || '').data,
         {
           signature: cpuData.signature,
           pageSize: cpuData.pageSize,
@@ -23,9 +26,12 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
       );
       break;
       case 'stk500v2':
-        uploader = new STK500v2(serial, { quiet: !config.verbose });
+        uploader = new STK500v2(serial, {
+          quiet: !config.verbose,
+          stdout: config.stdout,
+        });
         await uploader.bootload(
-          intelHex.parse(config.hex || '').data,
+          intelHex.parse(config.bin || '').data,
           cpuData,
         );
         break;
@@ -35,10 +41,11 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
         }
         uploader = new AVR109(serial, {
           quiet: !config.verbose,
+          stdout: config.stdout,
           avr109Reconnect: config.avr109Reconnect,
         });
         await uploader.bootload(
-          intelHex.parse(config.hex || '').data,
+          intelHex.parse(config.bin || '').data,
           cpuData,
         );
         break;

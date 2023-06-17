@@ -5,7 +5,7 @@ import { SerialPort } from 'serialport';
 import { upload } from '../src/index';
 import {
   waitForData, waitForDevice,
-  config, getHex,
+  config, getBin,
   espIdentify, ESPIdentifyResult,
 } from './util';
 import { waitForOpen } from '../src/util/serial-helpers';
@@ -17,7 +17,7 @@ const listPromise = espIdentify(numEsps);
 Object.keys(config.devices).forEach((deviceRef) => {
   const device = config.devices[deviceRef];
   let key = '';
-  let hex: Buffer | undefined;
+  let bin: Buffer | undefined;
   let files: ProgramFile[] | undefined;
   let serial: SerialPort;
   let flashMode: string | undefined;
@@ -28,13 +28,13 @@ Object.keys(config.devices).forEach((deviceRef) => {
     this.timeout(120 * 1000);
 
     before(async () => {
-      const res = await getHex(device.code, device.fqbn.trim());
+      const res = await getBin(device.code, device.fqbn.trim());
       key = res.key;
-      hex = res.hex;
+      bin = res.bin;
       files = res.files;
       flashMode = res.flashMode;
       flashFreq = res.flashFreq;
-      console.log('compiled hex');
+      console.log('compiled bin');
     });
 
     beforeEach(async () => {
@@ -70,7 +70,7 @@ Object.keys(config.devices).forEach((deviceRef) => {
     it(`should upload to ${device.name}`, async function() {
       this.retries(config.retries || 1);
       await upload(serial, {
-        hex,
+        bin,
         files,
         flashMode,
         flashFreq,
