@@ -45,7 +45,14 @@ devices:
   esp32:
     # DOIT ESP32 DEVKIT V1 is the closest match to what I have
     name: DOIT ESP32 DEVKIT V1
-    espChip: ESP32-D0WD-V3 (revision 3)
+    # espChip: ESP32-D0WD-V3 (revision 3)
+    espChip: ESP32-D0WDQ6 (revision 1)
+    vendorIds:
+      - '1a86'
+      - '10c4'
+    productIds:
+      - '7523'
+      - 'ea60'
     code: ping
     fqbn: esp32:esp32:esp32doit-devkit-v1
     cpu: esp32

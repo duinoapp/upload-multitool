@@ -1,4 +1,5 @@
 import { SerialPort } from 'serialport/dist/index.d';
+import { SerialPortPromise } from '../../serialport/serialport-promise';
 
 import statics from './constants';
 import { setDTRRTS } from '../../util/serial-helpers';
@@ -45,12 +46,12 @@ const defaultProgramOptions = {
 export default class STK500v2 {
   opts: STK500v2Options;
   quiet: boolean;
-  serial: SerialPort;
+  serial: SerialPortPromise;
   sequence: number;
 
-  constructor(serial: SerialPort, opts: STK500v2Options) {
+  constructor(serial: SerialPort | SerialPortPromise, opts: STK500v2Options) {
     this.opts = opts;
-    this.serial = serial;
+    this.serial = serial instanceof SerialPortPromise ? serial : new SerialPortPromise(serial);
     this.quiet = opts.quiet || false;
     this.sequence = 0;
   }
@@ -238,6 +239,8 @@ export default class STK500v2 {
 
   async reset(delay1: number, delay2: number) {
     this.log('reset');
+    await setDTRRTS(this.serial, false);
+    await asyncTimeout(delay1);
 
     await setDTRRTS(this.serial, true);
     await asyncTimeout(delay1);

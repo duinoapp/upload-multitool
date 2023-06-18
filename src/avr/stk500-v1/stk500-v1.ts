@@ -2,6 +2,7 @@
 // converted to typescript/modernised by mrfrase3 (GPL-3.0 license)
 
 import { SerialPort } from 'serialport/dist/index.d';
+import { SerialPortPromise } from '../../serialport/serialport-promise';
 import { setDTRRTS } from '../../util/serial-helpers';
 import asyncTimeout from '../../util/async-timeout';
 import { StdOut } from '../../index';
@@ -70,12 +71,12 @@ statics.OK_RESPONSE = Buffer.from([statics.RES_STK_INSYNC, statics.RES_STK_OK]);
 export default class STK500v1 {
   opts: STK500v1Options;
   quiet: boolean;
-  serial: SerialPort;
+  serial: SerialPortPromise;
 
-  constructor(serial: SerialPort, opts: STK500v1Options) {
+  constructor(serial: SerialPort | SerialPortPromise, opts: STK500v1Options) {
     this.opts = opts || {};
     this.quiet = this.opts.quiet || false;
-    this.serial = serial;
+    this.serial = serial instanceof SerialPortPromise ? serial : new SerialPortPromise(serial);
   }
 
   log (...args: any[]) {

@@ -34,7 +34,7 @@ module.exports = [{
     json(),
   ],
 }, {
-  input: 'dist/web-serialport.js',
+  input: 'dist/serialport/web-serialport.js',
   output: [
     {
       file: 'dist/web-serialport.cjs',

@@ -101,6 +101,10 @@ export interface ESPIdentifyResult extends PortInfo {
   }
 }
 
+const espVendorIds = ['1a86', '10c4'];
+const espProductIds = ['7523', 'ea60'];
+const isEsp = (port: PortInfo) => espVendorIds.includes(port.vendorId || '') && espProductIds.includes(port.productId || '');
+
 const pollDevices = async (
   espCount: number,
   existingList = [] as PortInfo[],
@@ -111,7 +115,7 @@ const pollDevices = async (
     if (!acc.find(a => a.path === p.path)) acc.push(p);
     return acc;
   }, existingList);
-  const numEsps = newList.filter(p => p.vendorId === '1a86' && p.productId === '7523').length;
+  const numEsps = newList.filter(p => isEsp(p)).length;
   if (numEsps >= espCount) return newList;
   if (count > 20) throw new Error('Could not detect enough ESPs');
   await asyncTimeout(250 + (Math.random() * 500));
@@ -141,7 +145,7 @@ export const espIdentify = async (espCount: number): Promise<ESPIdentifyResult[]
   const results = [] as ESPIdentifyResult[];
   await list.reduce(async (promise, port) => {
     await promise;
-    if (port.vendorId === '1a86' && port.productId === '7523') {
+    if (isEsp(port)) {
       results.push(await espIdentifyDevice(port));
     } else {
       results.push({ ...port });

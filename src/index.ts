@@ -1,4 +1,5 @@
 import { SerialPort } from 'serialport/dist/index.d';
+import { SerialPortPromise } from './serialport/serialport-promise';
 
 import { setBaud, waitForOpen } from './util/serial-helpers';
 import { ReconnectParams } from './avr/avr109/avr109';
@@ -28,7 +29,8 @@ export interface ProgramConfig {
   stdout?: StdOut;
 }
 
-export const upload = async (serial: SerialPort, config: ProgramConfig) => {
+export const upload = async (serialport: SerialPort, config: ProgramConfig) => {
+  const serial = new SerialPortPromise(serialport);
   if (!config.bin && !config.files?.length) {
     throw new Error('No hex or files provided for upload');
   }
@@ -43,9 +45,10 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
       write: (str: string) => console.log(str.replace(/(\n|\r)+$/g, '')),
     };
   }
+  const ts = Date.now();
   // ensure serial port is open
   if (!serial.isOpen) {
-    if (!serial.opening) serial.open();
+    await serial.open();
     await waitForOpen(serial);
   }
 
@@ -55,24 +58,30 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
     await setBaud(serial, config.speed);
   }
 
+  let newPort: SerialPortPromise | undefined;
   // upload using the correct tool/protocol
   switch (config.tool) {
     case 'avr':
     case 'avrdude':
-      await avr.upload(serial, config);
+      newPort = await avr.upload(serial, config);
       break;
     case 'esptool':
     case 'esptool_py':
-      await esp.upload(serial, config);
+      newPort = await esp.upload(serial, config);
       break;
     default:
       throw new Error(`Tool ${config.tool} not supported`);
   }
   
   // restore original baud rate
-  if (serial.baudRate !== existingBaud) {
-    await setBaud(serial, existingBaud);
+  if (newPort.baudRate !== existingBaud) {
+    await setBaud(newPort, existingBaud);
   }
+
+  return {
+    serialport: newPort,
+    time: Date.now() - ts,
+  };
 };
 
 export const isSupported = (tool: string, cpu: string) => {

@@ -54,9 +54,7 @@
 
       const getFilters = (deviceConfig) => {
         const filters = [];
-        if (deviceConfig.espChip || deviceConfig.mac) {
-          filters.push({ usbVendorId: 0x1a86, usbProductId: 0x7523 });
-        } else if (deviceConfig.vendorIds && deviceConfig.productIds) {
+        if (deviceConfig.vendorIds && deviceConfig.productIds) {
           deviceConfig.vendorIds.forEach((vendorId) => {
             deviceConfig.productIds.forEach((productId) => {
               filters.push({
@@ -65,6 +63,8 @@
               });
             });
           });
+        } else if (deviceConfig.espChip || deviceConfig.mac) {
+          filters.push({ usbVendorId: 0x1a86, usbProductId: 0x7523 });
         }
         return filters;
       };
@@ -159,7 +159,7 @@
           setStatus('Requesting Device...');
           filters = getFilters(deviceConfig);
           WebSerialPort.list().then(console.log);
-          const serial = await WebSerialPort.requestPort(
+          let serial = await WebSerialPort.requestPort(
             { filters },
             { baudRate: deviceConfig.speed || 115200 },
           );
@@ -170,7 +170,7 @@
           } = await getBin(deviceConfig.code, deviceConfig.fqbn);
 
           setStatus('Uploading...');
-          await upload(serial, {
+          const res = await upload(serial, {
             bin,
             files,
             flashMode,
@@ -197,11 +197,13 @@
             }
           });
 
+          serial = res.serialport;
+
           setStatus('Validating Upload...');
           await validateUpload(serial, key);
           setStatus('Cleaning Up...');
           await serial.close();
-          setStatus('Done! Success! Awesome!');
+          setStatus(`Done! Success! Awesome! (${res.time}ms)`);
         } catch (err) {
           console.error(err);
           setStatus(`Error: ${err.message}`);

@@ -1,4 +1,5 @@
 import { SerialPort } from 'serialport/dist/index.d';
+import { SerialPortPromise } from '../serialport/serialport-promise';
 import pako from 'pako';
 import MD5 from 'crypto-js/md5';
 import encBase64 from 'crypto-js/enc-base64';
@@ -78,7 +79,7 @@ export default class ESPLoader {
 
   opts: ESPOptions;
   quiet: boolean;
-  serial: SerialPort;
+  serial: SerialPortPromise;
   IS_STUB: boolean;
   chip: ROM | null;
   stdout: any;
@@ -86,10 +87,10 @@ export default class ESPLoader {
   syncStubDetected: boolean;
   FLASH_WRITE_SIZE: number;
 
-  constructor(serial: SerialPort, opts = {} as ESPOptions) {
+  constructor(serial: SerialPort | SerialPortPromise, opts = {} as ESPOptions) {
     this.opts = opts || {};
     this.quiet = this.opts.quiet || false;
-    this.serial = serial;
+    this.serial = serial instanceof SerialPortPromise ? serial : new SerialPortPromise(serial);
     this.IS_STUB = false;
     this.chip = null;
     this.stdout = opts.stdout || process?.stdout || {
@@ -239,7 +240,9 @@ export default class ESPLoader {
             started = true;
           }
         }
-        if (pkt.length) buffer = Buffer.concat([buffer, new Uint8Array(pkt)]);
+        if (pkt.length) {
+          buffer = Buffer.concat([buffer, Buffer.from(pkt)]);
+        }
         // if the packet is complete, call the finished handler
         if (buffer.length && !started) {
           finished();
@@ -349,7 +352,8 @@ export default class ESPLoader {
     if (mode !== 'no_reset') {
       // reset the device before syncing
       await this.serial.set({ dtr: false, rts: false });
-      await this.#sleep(100);
+      await this.#sleep(50);
+      await this.serial.set({ dtr: true, rts: true });
       await this.serial.set({ dtr: false, rts: true });
       await this.#sleep(100);
       if (esp32r0Delay) {
@@ -359,15 +363,17 @@ export default class ESPLoader {
       await this.serial.set({ dtr: true, rts: false });
       if (esp32r0Delay) {
         // await this._sleep(400);
+        // await this.#sleep(400);
       }
       await this.#sleep(50);
+      await this.serial.set({ dtr: false, rts: false });
       await this.serial.set({ dtr: false, rts: false });
     }
     // wait until the device is finished booting (writing initial data to serial)
     // eslint-disable-next-line no-constant-condition
     while (1) {
       try {
-        await this.read(1000, true);
+        await this.read(500, true);
       } catch (err) {
         // if nothing was read, the device is ready
         if (err instanceof Error && err.message.includes('timeout')) {
@@ -384,6 +390,8 @@ export default class ESPLoader {
       } catch (err) {
         if (err instanceof Error && err.message.includes('timeout')) {
           this.logChar(esp32r0Delay ? '_' : '.');
+        } else {
+          throw err;
         }
       }
       await this.#sleep(50);

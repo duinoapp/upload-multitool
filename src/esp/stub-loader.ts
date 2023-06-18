@@ -1,4 +1,4 @@
-import axios from 'axios';
+// import axios from 'axios';
 
 /*
   Stub loaders are uploaded and run in-memory on the target device.
@@ -39,7 +39,16 @@ export default class StubLoader {
     if (cache[stubName]) {
       return cache[stubName];
     }
-    const { data: res } = await axios.get(`${this.stubsUrl}/stub_flasher_${stubName}.json`);
+    let res = null as any;
+    if (typeof window === 'undefined' && typeof fetch === 'undefined') {
+      const { default: axios } = await import('axios');
+      const response = await axios.get(`${this.stubsUrl}/stub_flasher_${stubName}.json`);
+      res = response.data;
+    } else {
+      const response = await fetch(`${this.stubsUrl}/stub_flasher_${stubName}.json`);
+      res = await response.json();
+    }
+
 
     const stub = {
       data: Buffer.from(res.data, 'base64'),

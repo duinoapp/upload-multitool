@@ -1,13 +1,14 @@
-import { SerialPort } from 'serialport/dist/index.d';
 import { ProgramConfig } from '../index';
 
+import { SerialPortPromise } from '../serialport/serialport-promise';
 import intelHex from 'intel-hex';
 import getCpuData from './avr-cpu-data';
+
 import STK500v1 from './stk500-v1/stk500-v1';
 import STK500v2 from './stk500-v2/stk500-v2';
 import AVR109 from './avr109/avr109';
 
-export const upload = async (serial: SerialPort, config: ProgramConfig) => {
+export const upload = async (serial: SerialPortPromise, config: ProgramConfig) => {
   const cpuData = getCpuData(config.cpu);
   let uploader = null as STK500v2 | STK500v1 | AVR109 | null;
   switch (cpuData.protocol) {
@@ -44,14 +45,14 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
           stdout: config.stdout,
           avr109Reconnect: config.avr109Reconnect,
         });
-        await uploader.bootload(
+        return await uploader.bootload(
           intelHex.parse(config.bin || '').data,
           cpuData,
         );
-        break;
     default:
       throw new Error(`Protocol ${cpuData.protocol} not supported`);
   }
+  return serial;
 };
 
 export const isSupported = (cpu: string) => {
