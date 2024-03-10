@@ -1,11 +1,11 @@
-import { SerialPort } from 'serialport/dist/index.d';
-import { ProgramConfig } from '../index.d';
+import { SerialPortPromise } from '../serialport/serialport-promise';
+import { ProgramConfig } from '../index';
 import ESPLoader, { ESPOptions, UploadFileDef } from './loader';
 import asyncTimeout from '../util/async-timeout';
 
 const isSupported = (cpu: string) => ['esp8266', 'esp32'].includes(cpu);
 
-export const upload = async (serial: SerialPort, config: ProgramConfig) => {
+export const upload = async (serial: SerialPortPromise, config: ProgramConfig) => {
   if (!config.files?.length) throw new Error('No files to upload');
   // const log = (...args) => config.debug(`${args.join(' ')}\r\n`);
   const log = (...args: any[]) => console.log(...args);
@@ -20,6 +20,7 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
   try {
     espLoader = new ESPLoader(serial, {
       quiet: !config.verbose,
+      stdout: config.stdout,
     } as ESPOptions);
     await espLoader.mainFn();
     // await espLoader.flash_id();
@@ -37,7 +38,7 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
       // eslint-disable-next-line no-console
       console.error(err2);
     }
-    return;
+    throw err;
   }
 
   try {
@@ -62,6 +63,7 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
     log('Failed to upload:', err instanceof Error ? err.message : err);
   }
 
+  return serial;
 };
 
 export default { upload, isSupported };

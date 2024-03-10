@@ -2,11 +2,14 @@
 // converted to typescript/modernised by mrfrase3 (GPL-3.0 license)
 
 import { SerialPort } from 'serialport/dist/index.d';
-import { setDTRRTS } from '../../util/serial-helpers';
+import { SerialPortPromise } from '../../serialport/serialport-promise';
+import { setDTRRTS, castToSPP } from '../../util/serial-helpers';
 import asyncTimeout from '../../util/async-timeout';
+import { StdOut } from '../../index';
 
 interface STK500v1Options {
   quiet?: boolean;
+  stdout?: StdOut;
 }
 
 interface SendCommandOptions {
@@ -68,17 +71,17 @@ statics.OK_RESPONSE = Buffer.from([statics.RES_STK_INSYNC, statics.RES_STK_OK]);
 export default class STK500v1 {
   opts: STK500v1Options;
   quiet: boolean;
-  serial: SerialPort;
+  serial: SerialPortPromise;
 
-  constructor(serial: SerialPort, opts: STK500v1Options) {
+  constructor(serial: SerialPort | SerialPortPromise, opts: STK500v1Options) {
     this.opts = opts || {};
     this.quiet = this.opts.quiet || false;
-    this.serial = serial;
+    this.serial = castToSPP(serial);
   }
 
   log (...args: any[]) {
     if (this.quiet) return;
-    console.log(...args);
+    this.opts.stdout?.write(`${args.join(' ')}\r\n`);
   }
 
   receiveData(timeout = 0, responseLength: number): Promise<Buffer> {
@@ -107,7 +110,7 @@ export default class STK500v1 {
         while (!started && index < data.length) {
           const byte = data[index];
           if (startingBytes.indexOf(byte) !== -1) {
-            data = data.slice(index, data.length - index);
+            data = data.subarray(index, data.length - index);
             started = true;
           }
           index += 1;
@@ -166,7 +169,7 @@ export default class STK500v1 {
 
 
   async sync(attempts = 3, timeout = 400, ogAttempts = attempts): Promise<Buffer|null> {
-    this.log(`sync ${attempts}`);
+    this.log(`sync ${attempts} ${timeout}`);
     try {
       const res = await this.sendCommand({
         cmd: [

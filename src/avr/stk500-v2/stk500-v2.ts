@@ -1,11 +1,14 @@
 import { SerialPort } from 'serialport/dist/index.d';
+import { SerialPortPromise } from '../../serialport/serialport-promise';
 
 import statics from './constants';
-import { setDTRRTS } from '../../util/serial-helpers';
+import { setDTRRTS, castToSPP } from '../../util/serial-helpers';
 import asyncTimeout from '../../util/async-timeout';
+import { StdOut } from '../../index';
 
 interface STK500v2Options {
   quiet?: boolean;
+  stdout?: StdOut;
 }
 
 interface SendCommandOptions {
@@ -43,19 +46,19 @@ const defaultProgramOptions = {
 export default class STK500v2 {
   opts: STK500v2Options;
   quiet: boolean;
-  serial: SerialPort;
+  serial: SerialPortPromise;
   sequence: number;
 
-  constructor(serial: SerialPort, opts: STK500v2Options) {
+  constructor(serial: SerialPort | SerialPortPromise, opts: STK500v2Options) {
     this.opts = opts;
-    this.serial = serial;
+    this.serial = castToSPP(serial);
     this.quiet = opts.quiet || false;
     this.sequence = 0;
   }
 
   log(...args: any[]) {
     if (this.quiet) return;
-    console.log(...args);
+    this.opts.stdout?.write(`${args.join(' ')}\r\n`);
   }
 
   receiveData(timeout = 0, responseLength?: number): Promise<Buffer> {
@@ -236,6 +239,8 @@ export default class STK500v2 {
 
   async reset(delay1: number, delay2: number) {
     this.log('reset');
+    await setDTRRTS(this.serial, false);
+    await asyncTimeout(delay1);
 
     await setDTRRTS(this.serial, true);
     await asyncTimeout(delay1);

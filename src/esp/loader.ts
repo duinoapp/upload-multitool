@@ -1,14 +1,18 @@
 import { SerialPort } from 'serialport/dist/index.d';
 import pako from 'pako';
-import CryptoJS from 'crypto-js';
+import MD5 from 'crypto-js/md5';
+import encBase64 from 'crypto-js/enc-base64';
+import { SerialPortPromise } from '../serialport/serialport-promise';
+import { castToSPP } from '../util/serial-helpers';
 import StubLoader from './stub-loader';
-import roms from './roms';
-import ROM from './roms/rom';
+import roms from './roms/index';
+import ROM from './roms/rom.d';
+import { StdOut } from '../index';
 
 export interface ESPOptions {
   quiet?: boolean;
   stubUrl?: string;
-  stdout?: any;
+  stdout?: StdOut;
 }
 
 export interface UploadFileDef {
@@ -76,7 +80,7 @@ export default class ESPLoader {
 
   opts: ESPOptions;
   quiet: boolean;
-  serial: SerialPort;
+  serial: SerialPortPromise;
   IS_STUB: boolean;
   chip: ROM | null;
   stdout: any;
@@ -84,14 +88,14 @@ export default class ESPLoader {
   syncStubDetected: boolean;
   FLASH_WRITE_SIZE: number;
 
-  constructor(serial: SerialPort, opts = {} as ESPOptions) {
+  constructor(serial: SerialPort | SerialPortPromise, opts = {} as ESPOptions) {
     this.opts = opts || {};
     this.quiet = this.opts.quiet || false;
-    this.serial = serial;
+    this.serial = castToSPP(serial);
     this.IS_STUB = false;
     this.chip = null;
     this.stdout = opts.stdout || process?.stdout || {
-      write: (str: string) => console.log(str),
+      write: (str: string) => console.log(str.replace(/(\n|\r)+$/g, '')),
     };
     this.stubLoader = new StubLoader(this.opts.stubUrl);
     this.syncStubDetected = false;
@@ -106,7 +110,7 @@ export default class ESPLoader {
   // log out a line of text
   log (...args: any[]) {
     if (this.quiet) return;
-    this.stdout.write(`${args.map(arg => `${arg}`).join(' ')}\n`);
+    this.stdout.write(`${args.map(arg => `${arg}`).join(' ')}\r\n`);
   }
 
   // log out a set of characters
@@ -237,7 +241,9 @@ export default class ESPLoader {
             started = true;
           }
         }
-        if (pkt.length) buffer = Buffer.concat([buffer, new Uint8Array(pkt)]);
+        if (pkt.length) {
+          buffer = Buffer.concat([buffer, Buffer.from(pkt)]);
+        }
         // if the packet is complete, call the finished handler
         if (buffer.length && !started) {
           finished();
@@ -347,7 +353,8 @@ export default class ESPLoader {
     if (mode !== 'no_reset') {
       // reset the device before syncing
       await this.serial.set({ dtr: false, rts: false });
-      await this.#sleep(100);
+      await this.#sleep(50);
+      await this.serial.set({ dtr: true, rts: true });
       await this.serial.set({ dtr: false, rts: true });
       await this.#sleep(100);
       if (esp32r0Delay) {
@@ -357,15 +364,17 @@ export default class ESPLoader {
       await this.serial.set({ dtr: true, rts: false });
       if (esp32r0Delay) {
         // await this._sleep(400);
+        // await this.#sleep(400);
       }
       await this.#sleep(50);
+      await this.serial.set({ dtr: false, rts: false });
       await this.serial.set({ dtr: false, rts: false });
     }
     // wait until the device is finished booting (writing initial data to serial)
     // eslint-disable-next-line no-constant-condition
     while (1) {
       try {
-        await this.read(1000, true);
+        await this.read(500, true);
       } catch (err) {
         // if nothing was read, the device is ready
         if (err instanceof Error && err.message.includes('timeout')) {
@@ -382,6 +391,8 @@ export default class ESPLoader {
       } catch (err) {
         if (err instanceof Error && err.message.includes('timeout')) {
           this.logChar(esp32r0Delay ? '_' : '.');
+        } else {
+          throw err;
         }
       }
       await this.#sleep(50);
@@ -1055,7 +1066,8 @@ export default class ESPLoader {
       }
       let image = this.#padTo(file.data, 4);
       image = this.#updateImageFlashParams(image, address, flashSize, flashMode, flashFreq);
-      const calcMd5 = CryptoJS.MD5(CryptoJS.enc.Base64.parse(image.toString('base64')));
+      // const calcMd5 = CryptoJS.MD5(CryptoJS.enc.Base64.parse(image.toString('base64')));
+      const calcMd5 = MD5(encBase64.parse(image.toString('base64'))).toString() as string;
       // console.log(`Image MD5 ${calcMd5}`);
       const rawSize = image.length;
       let blocks;

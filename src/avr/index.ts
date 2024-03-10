@@ -1,19 +1,24 @@
-import { SerialPort } from 'serialport/dist/index.d';
-import { ProgramConfig } from '../index.d';
+import { ProgramConfig } from '../index';
 
+import { SerialPortPromise } from '../serialport/serialport-promise';
 import intelHex from 'intel-hex';
 import getCpuData from './avr-cpu-data';
+
 import STK500v1 from './stk500-v1/stk500-v1';
 import STK500v2 from './stk500-v2/stk500-v2';
+import AVR109 from './avr109/avr109';
 
-export const upload = async (serial: SerialPort, config: ProgramConfig) => {
+export const upload = async (serial: SerialPortPromise, config: ProgramConfig) => {
   const cpuData = getCpuData(config.cpu);
-  let uploader = null as STK500v2 | STK500v1 | null;
+  let uploader = null as STK500v2 | STK500v1 | AVR109 | null;
   switch (cpuData.protocol) {
     case 'stk500v1':
-      uploader = new STK500v1(serial, { quiet: !config.verbose });
+      uploader = new STK500v1(serial, {
+        quiet: !config.verbose,
+        stdout: config.stdout,
+      });
       await uploader.bootload(
-        intelHex.parse(config.hex || '').data,
+        intelHex.parse(config.bin || '').data,
         {
           signature: cpuData.signature,
           pageSize: cpuData.pageSize,
@@ -22,21 +27,38 @@ export const upload = async (serial: SerialPort, config: ProgramConfig) => {
       );
       break;
       case 'stk500v2':
-        uploader = new STK500v2(serial, { quiet: !config.verbose });
+        uploader = new STK500v2(serial, {
+          quiet: !config.verbose,
+          stdout: config.stdout,
+        });
         await uploader.bootload(
-          intelHex.parse(config.hex || '').data,
+          intelHex.parse(config.bin || '').data,
           cpuData,
         );
         break;
+      case 'avr109':
+        if (!config.avr109Reconnect) {
+          throw new Error('avr109Reconnect function not provided');
+        }
+        uploader = new AVR109(serial, {
+          quiet: !config.verbose,
+          stdout: config.stdout,
+          avr109Reconnect: config.avr109Reconnect,
+        });
+        return await uploader.bootload(
+          intelHex.parse(config.bin || '').data,
+          cpuData,
+        );
     default:
       throw new Error(`Protocol ${cpuData.protocol} not supported`);
   }
+  return serial;
 };
 
 export const isSupported = (cpu: string) => {
   try {
     const cpuData = getCpuData(cpu);
-    return ['stk500v1'].includes(cpuData.protocol);
+    return ['stk500v1', 'stk500v2', 'avr109'].includes(cpuData.protocol);
   } catch (e) {
     return false;
   }

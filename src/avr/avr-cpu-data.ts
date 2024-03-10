@@ -14,6 +14,8 @@ interface CPUData {
   byteDelay?: number;
   pollValue?: number;
   pollIndex?: number;
+  maxWriteDelay?: number;
+  chipEraseDelay?: number;
 }
 
 interface CPUDefinitions {
@@ -75,6 +77,10 @@ const cpuDefs = {
   atmega32u4: {
     signature: Buffer.from([0x43, 0x41, 0x54, 0x45, 0x52, 0x49, 0x4e]),
     protocol: 'avr109',
+    pageSize: 128,
+    numPages: 256,
+    maxWriteDelay: 4500,
+    chipEraseDelay: 9000,
   } as CPUData,
 } as CPUDefinitions;
 
