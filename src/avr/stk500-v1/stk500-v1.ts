@@ -3,7 +3,7 @@
 
 import { SerialPort } from 'serialport/dist/index.d';
 import { SerialPortPromise } from '../../serialport/serialport-promise';
-import { setDTRRTS } from '../../util/serial-helpers';
+import { setDTRRTS, castToSPP } from '../../util/serial-helpers';
 import asyncTimeout from '../../util/async-timeout';
 import { StdOut } from '../../index';
 
@@ -76,7 +76,7 @@ export default class STK500v1 {
   constructor(serial: SerialPort | SerialPortPromise, opts: STK500v1Options) {
     this.opts = opts || {};
     this.quiet = this.opts.quiet || false;
-    this.serial = serial instanceof SerialPortPromise ? serial : new SerialPortPromise(serial);
+    this.serial = castToSPP(serial);
   }
 
   log (...args: any[]) {
@@ -169,7 +169,7 @@ export default class STK500v1 {
 
 
   async sync(attempts = 3, timeout = 400, ogAttempts = attempts): Promise<Buffer|null> {
-    this.log(`sync ${attempts}`);
+    this.log(`sync ${attempts} ${timeout}`);
     try {
       const res = await this.sendCommand({
         cmd: [

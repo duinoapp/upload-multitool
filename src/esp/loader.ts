@@ -1,8 +1,9 @@
 import { SerialPort } from 'serialport/dist/index.d';
-import { SerialPortPromise } from '../serialport/serialport-promise';
 import pako from 'pako';
 import MD5 from 'crypto-js/md5';
 import encBase64 from 'crypto-js/enc-base64';
+import { SerialPortPromise } from '../serialport/serialport-promise';
+import { castToSPP } from '../util/serial-helpers';
 import StubLoader from './stub-loader';
 import roms from './roms/index';
 import ROM from './roms/rom.d';
@@ -90,7 +91,7 @@ export default class ESPLoader {
   constructor(serial: SerialPort | SerialPortPromise, opts = {} as ESPOptions) {
     this.opts = opts || {};
     this.quiet = this.opts.quiet || false;
-    this.serial = serial instanceof SerialPortPromise ? serial : new SerialPortPromise(serial);
+    this.serial = castToSPP(serial);
     this.IS_STUB = false;
     this.chip = null;
     this.stdout = opts.stdout || process?.stdout || {

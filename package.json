@@ -1,5 +1,5 @@
 {
-  "name": "upload-multitool",
+  "name": "@duinoapp/upload-multitool",
   "version": "0.0.1",
   "description": "Micro Controller Uploading Multitool",
   "main": "dist/index.js",

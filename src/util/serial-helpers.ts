@@ -1,6 +1,15 @@
 import { SerialPort } from 'serialport/dist/index.d';
 import { SerialPortPromise } from '../serialport/serialport-promise';
 
+export const isPromise = (serial: SerialPort | SerialPortPromise): boolean => {
+  return !!(serial as SerialPortPromise).isSerialPortPromise;
+}
+
+export const castToSPP = (serial: SerialPort | SerialPortPromise): SerialPortPromise => {
+  if (isPromise(serial)) return serial as SerialPortPromise;
+  return new SerialPortPromise(serial as SerialPort);
+}
+
 export const waitForOpen = (serial: SerialPort | SerialPortPromise, timeout: number = 1000): Promise<boolean> => {
   let id = '';
   // id = Math.random().toString(36).substring(7);
@@ -34,8 +43,8 @@ export const waitForOpen = (serial: SerialPort | SerialPortPromise, timeout: num
 };
 
 export const setBaud = (serial: SerialPort | SerialPortPromise, baud: number): Promise<void> => new Promise((resolve, reject) => {
-  if (serial instanceof SerialPortPromise) {
-    serial.update({ baudRate: baud }).then(resolve).catch(reject);
+  if (isPromise(serial)) {
+    (serial as SerialPortPromise).update({ baudRate: baud }).then(resolve).catch(reject);
     return;
   }
   serial.update({ baudRate: baud }, (err) => {
@@ -45,8 +54,8 @@ export const setBaud = (serial: SerialPort | SerialPortPromise, baud: number): P
 });
 
 export const setDTRRTS = (serial: SerialPort | SerialPortPromise, flag: boolean): Promise<void> => new Promise((resolve, reject) => {
-  if (serial instanceof SerialPortPromise) {
-    serial.set({ dtr: flag, rts: flag }).then(resolve).catch(reject);
+  if (isPromise(serial)) {
+    (serial as SerialPortPromise).set({ dtr: flag, rts: flag }).then(() => resolve).catch(reject);
     return;
   }
   serial.set({ dtr: flag, rts: flag }, (err) => {

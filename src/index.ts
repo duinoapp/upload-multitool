@@ -1,10 +1,15 @@
-import { SerialPort } from 'serialport/dist/index.d';
-import { SerialPortPromise } from './serialport/serialport-promise';
+import type { SerialPort } from 'serialport/dist/index.d';
+import { SerialPortPromise as SPP } from './serialport/serialport-promise';
+import { WebSerialPort as WSP, WebSerialPortPromise as WSPP } from './serialport/web-serialport';
 
-import { setBaud, waitForOpen } from './util/serial-helpers';
+import { setBaud, waitForOpen, castToSPP } from './util/serial-helpers';
 import { ReconnectParams } from './avr/avr109/avr109';
 import avr from './avr/index';
 import esp from './esp/index';
+
+export class SerialPortPromise extends SPP {}
+export class WebSerialPort extends WSP {}
+export class WebSerialPortPromise extends WSPP {}
 
 export interface ProgramFile {
   data: string;
@@ -18,8 +23,8 @@ export interface StdOut {
 export interface ProgramConfig {
   bin?: Buffer | string;
   files?: ProgramFile[];
-  speed?: number;
-  uploadSpeed?: number;
+  speed?: number; // baud rate to connect to bootloader
+  uploadSpeed?: number; // baud rate to use for upload (ESP)
   tool?: string;
   cpu?: string;
   verbose?: boolean;
@@ -29,8 +34,8 @@ export interface ProgramConfig {
   stdout?: StdOut;
 }
 
-export const upload = async (serialport: SerialPort, config: ProgramConfig) => {
-  const serial = new SerialPortPromise(serialport);
+export const upload = async (serialport: SerialPort | SerialPortPromise, config: ProgramConfig) => {
+  const serial = castToSPP(serialport);
   if (!config.bin && !config.files?.length) {
     throw new Error('No hex or files provided for upload');
   }

@@ -1,6 +1,6 @@
 import { SerialPort } from 'serialport/dist/index.d';
 import { SerialPortPromise } from '../../serialport/serialport-promise';
-import { waitForOpen, setDTRRTS } from '../../util/serial-helpers';
+import { waitForOpen, castToSPP } from '../../util/serial-helpers';
 import asyncTimeout from '../../util/async-timeout';
 import { StdOut } from '../../index';
 
@@ -97,7 +97,7 @@ export default class AVR109 {
     this.opts = opts || {};
     this.signature = this.opts.signature || 'LUFACDC';
     this.quiet = this.opts.quiet || false;
-    this.serial = serial instanceof SerialPortPromise ? serial : new SerialPortPromise(serial);
+    this.serial = castToSPP(serial);
 
     this.hasAutoIncrAddr = false;
     this.bufferSize = 0;
@@ -446,7 +446,7 @@ export default class AVR109 {
         .then((serial: SerialPort | SerialPortPromise) => {
           clearTimeout(timeoutId);
           if (timedOut) return;
-          resolve(serial instanceof SerialPortPromise ? serial : new SerialPortPromise(serial));
+          resolve(castToSPP(serial));
         })
         .catch(reject);
     });
@@ -476,12 +476,12 @@ export default class AVR109 {
       await this.serial.open();
       await waitForOpen(this.serial);
     }
-    console.log(this.serial?.port);
+    // console.log(this.serial?.port);
     if (this.serial.baudRate !== this.opts.speed) {
       await this.serial.update({ baudRate: this.opts.speed || 57600 });
     }
     await asyncTimeout(200);
-    console.log('reconnected', Date.now() - ts);
+    // console.log('reconnected', Date.now() - ts);
   }
 
   async exitBootloader() {

@@ -1,11 +1,14 @@
-import { SerialPort } from 'serialport';
-import { SetOptions } from '@serialport/bindings-interface'
+import type { SerialPort } from 'serialport';
+import type { SetOptions } from '@serialport/bindings-interface'
+import type { WebSerialPort } from './web-serialport';
 import EventEmitter from 'events';
 
 // a class that wraps a serial port and provides a promise-based interface
 
 export class SerialPortPromise extends EventEmitter {
-  port: SerialPort;
+  port: SerialPort | WebSerialPort;
+  _key: string;
+  isSerialPortPromise = true;
   
   /**
    * Consumes a serial port and returns a similar promise-based interface
@@ -14,13 +17,18 @@ export class SerialPortPromise extends EventEmitter {
    * @emits close
    * @emits error
    */
-  constructor(port: SerialPort) {
+  constructor(port: SerialPort | WebSerialPort) {
     super();
+    this._key = Math.random().toString(36).substring(2);
     this.port = port;
     this.port.on('open', () => this.emit('open'));
     this.port.on('close', () => this.emit('close'));
     this.port.on('error', (err) => this.emit('error', err));
     this.port.on('data', (data) => this.emit('data', data));
+  }
+
+  get key(): string {
+    return this._key;
   }
 
   get isOpen(): boolean {
@@ -39,7 +47,7 @@ export class SerialPortPromise extends EventEmitter {
    * Opens a connection to the given serial port.
    * @emits open
    */
-  async open(): Promise<void> {
+  open(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.port.open((err) => {
         if (err) {
@@ -58,7 +66,7 @@ export class SerialPortPromise extends EventEmitter {
    *
    * If there are in progress writes when the port is closed the writes will error.
    */
-  async close(): Promise<void> {
+  close(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.port.close((err) => {
         if (err) reject(err);
@@ -94,7 +102,7 @@ export class SerialPortPromise extends EventEmitter {
   * @param  {(string|array|buffer)} data Accepts a [`Buffer`](http://nodejs.org/api/buffer.html) object, or a type that is accepted by the `Buffer.from` method (e.g. an array of bytes or a string).
    * @param  {string=} encoding The encoding, if chunk is a string. Defaults to `'utf8'`. Also accepts `'ascii'`, `'base64'`, `'binary'`, and `'hex'` See [Buffers and Character Encodings](https://nodejs.org/api/buffer.html#buffer_buffers_and_character_encodings) for all available options.
    */
-  async write(data: string | Array<number> | Buffer, encoding?: BufferEncoding): Promise<void> {
+  write(data: string | Array<number> | Buffer, encoding?: BufferEncoding): Promise<void> {
     return new Promise((resolve, reject) => {
       let needsDrain = false;
       const finish = (err: Error | null, isDrain?: boolean) => {
@@ -118,7 +126,7 @@ export class SerialPortPromise extends EventEmitter {
     });
   }
 
-  async drain(): Promise<void> {
+  drain(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.port.drain((err) => {
         if (err) reject(err);
@@ -127,7 +135,7 @@ export class SerialPortPromise extends EventEmitter {
     });
   }
 
-  async flush(): Promise<void> {
+  flush(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.port.flush((err) => {
         if (err) reject(err);
@@ -142,7 +150,7 @@ export class SerialPortPromise extends EventEmitter {
    * @param {number=} [options.baudRate] The baud rate of the port to be opened. This should match one of the commonly available baud rates, such as 110, 300, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 57600, or 115200. Custom rates are supported best effort per platform. The device connected to the serial port is not guaranteed to support the requested baud rate, even if the port itself supports that baud rate.
    * @returns {undefined}
    */
-  async update(options: { baudRate: number }): Promise<void> {
+  update(options: { baudRate: number }): Promise<void> {
     return new Promise((resolve, reject) => {
       this.port.update(options, (err) => {
         if (err) reject(err);
@@ -163,7 +171,7 @@ export class SerialPortPromise extends EventEmitter {
    * @param {boolean=} [options.dtr=true] sets the dtr flag
    * @param {boolean=} [options.rts=true] sets the rts flag
    */
-  async set(options: SetOptions): Promise<void> {
+  set(options: SetOptions): Promise<void> {
     return new Promise((resolve, reject) => {
       this.port.set(options, (err) => {
         if (err) reject(err);
@@ -179,7 +187,7 @@ export class SerialPortPromise extends EventEmitter {
    * for Windows and [`ioctl`](http://linux.die.net/man/4/tty_ioctl) for mac and linux.
    * @returns {object}
    */
-  async get(): Promise<{ cts: boolean; dsr: boolean; dcd: boolean }> {
+  get(): Promise<{ cts: boolean; dsr: boolean; dcd: boolean }> {
     return new Promise((resolve, reject) => {
       this.port.get((err, options) => {
         if (err) reject(err);

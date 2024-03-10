@@ -1,11 +1,10 @@
-import {
+import type {
   PortInfo, BindingPortInterface, BindingInterface,
   SetOptions, UpdateOptions,
 } from '@serialport/bindings-interface';
 import { SerialPortStream, OpenOptions } from '@serialport/stream';
-import '@types/w3c-web-serial';
 import EventEmitter from 'events';
-
+import { SerialPortPromise } from './serialport-promise';
 export interface WebPortInfo extends PortInfo {
   port: SerialPort;
 }
@@ -85,8 +84,8 @@ class WebSerialPortBinding extends EventEmitter implements BindingPortInterface 
           stop = true;
         } else if (value) {
           const buffer = Buffer.from(value.buffer);
-          console.log('read hex', buffer.toString('hex'));
-          console.log('read utf8', buffer.toString('utf8'));
+          // console.log('read hex', buffer.toString('hex'));
+          // console.log('read utf8', buffer.toString('utf8'));
           this.emit('data', buffer);
         }
       }
@@ -111,7 +110,7 @@ class WebSerialPortBinding extends EventEmitter implements BindingPortInterface 
         this.baudRate = options.baudRate;
       }
       try {
-        console.log(this.baudRate);
+        // console.log(this.baudRate);
         await this.port.open({
           baudRate: this.baudRate,
           // dataBits: options.dataBits,
@@ -140,7 +139,7 @@ class WebSerialPortBinding extends EventEmitter implements BindingPortInterface 
     this.#closing = true;
     try {
       await this.#closeReader();
-      console.log(this.port, this.#readPromise);
+      // console.log(this.port, this.#readPromise);
       await this.port.close();
       this.isOpen = false;
       this.emit('close');
@@ -152,19 +151,27 @@ class WebSerialPortBinding extends EventEmitter implements BindingPortInterface 
   async #write(buffer: Buffer) {
     const writer = this.port.writable?.getWriter();
     if (!writer) throw new Error('Port is not writable');
-    console.log('write hex', buffer.toString('hex'));
-    console.log('write utf8', buffer.toString('utf8'));
+    await writer.ready;
+    // console.log('write hex', buffer.toString('hex'));
+    // console.log('write utf8', buffer.toString('utf8'));
     await writer.write(buffer);
-    await writer.close();
+    writer.releaseLock();
+    // await writer.close();
   }
 
   write(buffer: Buffer) {
-    if (this.#writePromise) {
-      this.#writePromise = this.#writePromise.then(() => this.#write(buffer));
-    } else {
-      this.#writePromise = this.#write(buffer);
+    let promise = null as Promise<void> | null;
+    const write = async () => {
+      await this.#write(buffer);
+      if (promise === this.#writePromise) this.#writePromise = null;
     }
-    return this.#writePromise;
+    if (this.#writePromise) {
+      promise = this.#writePromise.then(write);
+    } else {
+      promise = write();
+    }
+    this.#writePromise = promise;
+    return promise;
   }
 
   read(buffer: Buffer, offset: number, length: number) {
@@ -212,14 +219,13 @@ class WebSerialPortBinding extends EventEmitter implements BindingPortInterface 
   }
 
   async set(options: SetOptions) {
-    console.log(options, this.port);
+    // console.log(options, this.port);
     const mappedOpts = {} as SerialOutputSignals;
     if (typeof options.dtr === 'boolean') mappedOpts.dataTerminalReady = options.dtr;
     if (typeof options.rts === 'boolean') mappedOpts.requestToSend = options.rts;
     if (typeof options.brk === 'boolean') mappedOpts.break = options.brk;
-    console.log(mappedOpts);
+    // console.log(mappedOpts);
     await this.port.setSignals(mappedOpts);
-    console.log(1);
   }
 
   async get() {
@@ -245,14 +251,13 @@ class WebSerialPortBinding extends EventEmitter implements BindingPortInterface 
 
 }
 
-export default class WebSerialPort extends SerialPortStream {
+export class WebSerialPort extends SerialPortStream {
 
   static isSupported() {
     return 'serial' in navigator;
   }
 
   static async requestPort(reqOpts: SerialPortRequestOptions = {}, openOpts: OpenOptions) {
-    console.log(reqOpts);
     const port = await navigator.serial.requestPort(reqOpts);
     return new WebSerialPort(port, openOpts);
   }
@@ -275,4 +280,26 @@ export default class WebSerialPort extends SerialPortStream {
       });
     });
   }
+}
+
+export class WebSerialPortPromise extends SerialPortPromise {
+
+  static isSupported() {
+    return WebSerialPort.isSupported();
+  }
+
+  static async requestPort(reqOpts: SerialPortRequestOptions = {}, openOpts: OpenOptions) {
+    const port = await navigator.serial.requestPort(reqOpts);
+    return new WebSerialPortPromise(port, openOpts);
+  }
+
+  static list() {
+    return WebSerialPort.list();
+  }
+
+  constructor(port: SerialPort | WebPortInfo, options: Partial<OpenOptions>) {
+    const webSerialPort = new WebSerialPort(port, options);
+    super(webSerialPort);
+  }
+
 }

@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="../dist/index.umd.js"></script>
-    <script src="../dist/web-serialport.umd.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.0.0/css/xterm.css">
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.0.0/lib/xterm.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
@@ -32,7 +31,7 @@
       <div id="terminal"></div>
     </div>
     <script>
-      const { isSupported, upload } = uploadMultitool;
+      const { isSupported, upload, WebSerialPort } = uploadMultitool;
 
       const setStatus = (status) => {
         document.getElementById('status').innerHTML = status;

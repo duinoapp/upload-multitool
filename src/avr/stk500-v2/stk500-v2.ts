@@ -2,7 +2,7 @@ import { SerialPort } from 'serialport/dist/index.d';
 import { SerialPortPromise } from '../../serialport/serialport-promise';
 
 import statics from './constants';
-import { setDTRRTS } from '../../util/serial-helpers';
+import { setDTRRTS, castToSPP } from '../../util/serial-helpers';
 import asyncTimeout from '../../util/async-timeout';
 import { StdOut } from '../../index';
 
@@ -51,7 +51,7 @@ export default class STK500v2 {
 
   constructor(serial: SerialPort | SerialPortPromise, opts: STK500v2Options) {
     this.opts = opts;
-    this.serial = serial instanceof SerialPortPromise ? serial : new SerialPortPromise(serial);
+    this.serial = castToSPP(serial);
     this.quiet = opts.quiet || false;
     this.sequence = 0;
   }

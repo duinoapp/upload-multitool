@@ -10,14 +10,17 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node",
+      "w3c-web-serial"
+    ]
   },
   "ts-node": {
     "files": true
   },
   "files": [
+    "typings/index.d.ts",
     "src/index.ts",
-    "src/global.d.ts",
     "src/serialport/web-serialport.ts"
   ],
   "include": ["src"],
