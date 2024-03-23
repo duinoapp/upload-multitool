@@ -55,7 +55,7 @@ export const setBaud = (serial: SerialPort | SerialPortPromise, baud: number): P
 
 export const setDTRRTS = (serial: SerialPort | SerialPortPromise, flag: boolean): Promise<void> => new Promise((resolve, reject) => {
   if (isPromise(serial)) {
-    (serial as SerialPortPromise).set({ dtr: flag, rts: flag }).then(() => resolve).catch(reject);
+    (serial as SerialPortPromise).set({ dtr: flag, rts: flag }).then(resolve).catch(reject);
     return;
   }
   serial.set({ dtr: flag, rts: flag }, (err) => {
